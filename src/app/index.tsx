@@ -1,24 +1,16 @@
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 
-const names = [
-  'Alice Johnson',
-  'Bob Smith',
-  'Carol Williams',
-  'David Brown',
-  'Emma Davis',
-  'Frank Miller',
-  'Grace Wilson',
-  'Henry Moore',
-];
+import NavBar, { Tab } from './components/nav_bar';
+import Home from './layouts/home_layout';
+import Search from './layouts/search_layout';
 
 export default function HomeScreen() {
+  const [tab, setTab] = useState<Tab>('home');
   return (
     <View style={styles.container}>
-      <FlatList
-        data={names}
-        keyExtractor={(item) => item}
-        renderItem={({ item }) => <Text style={styles.name}>{item}</Text>}
-      />
+      <View style={styles.content}>{tab === 'home' ? <Home /> : <Search />}</View>
+      <NavBar active={tab} onChange={setTab} />
     </View>
   );
 }
@@ -26,12 +18,9 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
   },
-  name: {
-    fontSize: 18,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ccc',
+  content: {
+    flex: 1,
   },
 });
+

@@ -1,5 +1,47 @@
 # Welcome to your Expo app 👋
 
+# setup directory 
+
+#create docker 
+
+docker run -it \
+  --name MedSupply \
+  -p 8081:8081 \
+  -v /home/khaali5u/MedSupplier:/workspace \
+  ubuntu:24.04 bash
+
+
+#start docker 
+docker start -ai MedSupply
+
+#setup docker 
+
+apt-get update
+apt-get install -y curl ca-certificates
+
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+apt-get install -y nodejs
+
+
+export EXPO_TOKEN="xWtAsceTmH_JTtPhQ7xut48Ea7a6SrZ-2zHwXTFE"
+
+
+#configure the project 
+
+eas build:configure
+
+#build the android app 
+
+eas build --platform android --profile preview
+
+#build without git 
+
+EAS_NO_VCS=1 eas build --platform android --profile preview
+
+start for testing 
+
+npx expo start --host lan
+
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
 ## Get started
