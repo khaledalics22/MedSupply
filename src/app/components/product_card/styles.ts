@@ -21,6 +21,11 @@ const styles = StyleSheet.create({
     color: '#1E2A39',
     marginTop: 8,
   },
+  variantText: {
+    fontSize: 11,
+    color: '#667085',
+    marginTop: 3,
+  },
   description: {
     fontSize: 12,
     color: '#667085',
@@ -41,6 +46,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     
     color: '#208AEF',
+    fontWeight: '700',
   },
   originalPrice: {
     fontSize: 11,
@@ -56,21 +62,41 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 999,
   },
-  actionRow: {
+  quantityRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: 'center',
+    gap: 12,
     marginTop: 2,
   },
-  actionLabel: {
-    fontSize: 12,
-    color: '#667085',
+  quantityButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#208AEF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quantityButtonDisabled: {
+    opacity: 0.45,
+  },
+  quantityButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  quantityValue: {
+    minWidth: 24,
+    textAlign: 'center',
+    color: '#1E2A39',
+    fontWeight: '700',
   },
   addButton: {
     backgroundColor: '#208AEF',
     borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 8,
+    alignItems: 'center',
   },
   addButtonText: {
     color: '#fff',

@@ -19,7 +19,7 @@ export default function FactoryDetailLayout({
   onProductSelected?: (productId: string) => void;
 }) {
   const database = iocContainer.getDatabase();
-  const { addToCart } = useAppState();
+  const { cart, addToCart, updateQuantity } = useAppState();
   const factory = database.getFactoryById(factoryId);
 
   if (!factory) {
@@ -63,14 +63,19 @@ export default function FactoryDetailLayout({
           {products.map((product) => {
             const offer = offers.find((candidate) => candidate.productId === product.id);
             if (!offer) return null;
+            const cartItem = cart.find((entry) => entry.offerType === 'manufacturer' && entry.offerId === offer.id);
             return (
               <ProductCard
                 key={product.id}
                 product={product}
                 offer={offer}
                 manufacturerName={factory.name}
+                cartQuantity={cartItem?.quantity ?? 0}
+                maxQuantity={offer.stockQuantity}
                 onPress={() => onProductSelected?.(product.id)}
                 onAddToCart={() => addToCart('manufacturer', offer.id, 1)}
+                onIncreaseQuantity={() => updateQuantity('manufacturer', offer.id, (cartItem?.quantity ?? 0) + 1)}
+                onDecreaseQuantity={() => updateQuantity('manufacturer', offer.id, (cartItem?.quantity ?? 1) - 1)}
               />
             );
           })}

@@ -20,7 +20,7 @@ export default function StoreDetailLayout({
   onProductSelected?: (productId: string) => void;
 }) {
   const database = iocContainer.getDatabase();
-  const { addToCart, favoriteStores, toggleFavoriteStore, orders } = useAppState();
+  const { cart, addToCart, updateQuantity, favoriteStores, toggleFavoriteStore, orders } = useAppState();
   const [tab, setTab] = useState<'medicines' | 'pending' | 'my-orders'>('medicines');
 
   const store = database.getStoreById(storeId);
@@ -108,16 +108,23 @@ export default function StoreDetailLayout({
             {offers.length === 0 ? (
               <Text style={styles.emptyState}>No products available for this store.</Text>
             ) : (
-              offers.map(({ product, offer, store: storeInfo }) => (
-                <ProductCard
-                  key={offer.id}
-                  product={product!}
-                  offer={offer}
-                  store={storeInfo}
-                  onPress={() => onProductSelected?.(product!.id)}
-                  onAddToCart={() => addToCart('store', offer.id, 1)}
-                />
-              ))
+              offers.map(({ product, offer, store: storeInfo }) => {
+                const cartItem = cart.find((entry) => entry.offerType === 'store' && entry.offerId === offer.id);
+                return (
+                  <ProductCard
+                    key={offer.id}
+                    product={product!}
+                    offer={offer}
+                    store={storeInfo}
+                    cartQuantity={cartItem?.quantity ?? 0}
+                    maxQuantity={offer.stockQuantity}
+                    onPress={() => onProductSelected?.(product!.id)}
+                    onAddToCart={() => addToCart('store', offer.id, 1)}
+                    onIncreaseQuantity={() => updateQuantity('store', offer.id, (cartItem?.quantity ?? 0) + 1)}
+                    onDecreaseQuantity={() => updateQuantity('store', offer.id, (cartItem?.quantity ?? 1) - 1)}
+                  />
+                );
+              })
             )}
           </View>
         )}

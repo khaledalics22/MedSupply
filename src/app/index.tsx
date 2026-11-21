@@ -3,7 +3,6 @@ import { View } from 'react-native';
 
 import NavBar, { Tab } from './components/nav_bar';
 import CartLayout from './layouts/cart_layout';
-import CategoryDetailLayout from './layouts/category_detail_layout';
 import CheckoutLayout from './layouts/checkout_layout';
 import FactoryDetailLayout from './layouts/factory_detail_layout';
 import Home from './layouts/home_layout';
@@ -14,6 +13,12 @@ import ProductDetailLayout from './layouts/product_detail_layout';
 import ProfileLayout from './layouts/profile_layout';
 import Search from './layouts/search_layout';
 import StoreDetailLayout from './layouts/store_detail_layout';
+import BestPricesLayout from './layouts/best_prices_layout';
+import SpecialtyLayout from './layouts/specialty_layout';
+import SpecialtyDetailLayout from './layouts/specialty_detail_layout';
+import ManufacturersLayout from './layouts/manufacturers_layout';
+import StoresLayout from './layouts/stores_layout';
+import BeautyProductsLayout from './layouts/beauty_products_layout';
 import { AppStateProvider, useAppState } from './state/app_state';
 import { CategoryType, Item, ItemType } from './utils/types';
 import styles from './styles/index.styles';
@@ -54,16 +59,7 @@ function AppContent() {
     }
 
     if (selectedSpecialtyId) {
-      return (
-        <CategoryDetailLayout
-          categoryType={CategoryType.Cosmetics}
-          language={language}
-          specialtyId={selectedSpecialtyId}
-          onItemSelected={() => {}}
-          onProductSelected={(productId) => { setSelectedProductId(productId); setSelectedSpecialtyId(null); }}
-          onBack={() => setSelectedSpecialtyId(null)}
-        />
-      );
+      return <SpecialtyDetailLayout specialtyId={selectedSpecialtyId} language={language} onBack={() => setSelectedSpecialtyId(null)} onProductSelected={setSelectedProductId} />;
     }
 
     if (selectedItem) {
@@ -73,12 +69,6 @@ function AppContent() {
 
       if ((selectedItem as any).type === 'factory') {
         return <FactoryDetailLayout factoryId={selectedItem.id} language={language} onBack={() => setSelectedItem(null)} onProductSelected={(productId) => { setSelectedProductId(productId); setSelectedItem(null); }} />;
-      }
-
-      if ((selectedItem as any).type === 'specialty') {
-        setSelectedSpecialtyId(selectedItem.id);
-        setSelectedItem(null);
-        return null;
       }
 
       if ((selectedItem as any).type === ItemType.Store) {
@@ -93,18 +83,27 @@ function AppContent() {
     }
 
     if (selectedCategory) {
-      return (
-        <CategoryDetailLayout
-          categoryType={selectedCategory}
-          language={language}
-          onItemSelected={(item) => {
-            if ((item as any).type === CategoryType.Specialty) setSelectedSpecialtyId(item.id);
-            else setSelectedItem(item);
-          }}
-          onProductSelected={(productId) => { setSelectedProductId(productId); setSelectedItem(null); }}
-          onBack={() => { setSelectedCategory(null); setTab('home'); clearSectionState(); }}
-        />
-      );
+      const closeCategory = () => { setSelectedCategory(null); setTab('home'); clearSectionState(); };
+
+      if (selectedCategory === CategoryType.BestPrices) {
+        return <BestPricesLayout language={language} onBack={closeCategory} onProductSelected={setSelectedProductId} />;
+      }
+
+      if (selectedCategory === CategoryType.Specialty) {
+        return <SpecialtyLayout language={language} onBack={closeCategory} onSpecialtySelected={setSelectedSpecialtyId} />;
+      }
+
+      if (selectedCategory === CategoryType.Manufacturers) {
+        return <ManufacturersLayout language={language} onBack={closeCategory} onManufacturerSelected={(manufacturerId) => setSelectedItem({ id: manufacturerId, type: 'factory' } as any)} />;
+      }
+
+      if (selectedCategory === CategoryType.Stores) {
+        return <StoresLayout language={language} onBack={closeCategory} onStoreSelected={(storeId) => setSelectedItem({ id: storeId, type: 'store' } as any)} />;
+      }
+
+      if (selectedCategory === CategoryType.Cosmetics) {
+        return <BeautyProductsLayout language={language} onBack={closeCategory} onProductSelected={setSelectedProductId} />;
+      }
     }
 
     if (tab === 'home') {

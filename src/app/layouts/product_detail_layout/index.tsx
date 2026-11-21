@@ -17,7 +17,7 @@ export default function ProductDetailLayout({
   onBack: () => void;
 }) {
   const database = iocContainer.getDatabase();
-  const { addToCart } = useAppState();
+  const { cart, addToCart, updateQuantity } = useAppState();
   const product = database.getProductById(productId);
 
   if (!product) {
@@ -66,27 +66,34 @@ export default function ProductDetailLayout({
         </View>
 
         <Text style={styles.sectionTitle}>Available offers</Text>
-        {[...storeOffers.map((item) => ({ ...item, offerType: 'store' as const })), ...manufacturerOffers.map((item) => ({ ...item, offerType: 'manufacturer' as const }))].map((item) => (
-          <View key={`${item.offerType}-${item.offer.id}`} style={styles.offerCard}>
-            <Text style={styles.storeName}>{item.sellerName}</Text>
-            <Text style={styles.offerPrice}>{item.offer.pharmacyPriceAfterDiscount} EGP</Text>
-            {item.offer.consumerPrice > item.offer.pharmacyPriceAfterDiscount && (
-              <Text style={styles.offerOldPrice}>{item.offer.consumerPrice} EGP</Text>
-            )}
-            {item.offer.discountPercentage > 0 && (
-              <Text style={styles.offerDiscount}>-{item.offer.discountPercentage}%</Text>
-            )}
-            <ProductCard
-              product={product}
-              offer={item.offer}
-              store={item.offerType === 'store' ? database.getStoreById(item.offer.storeId) : undefined}
-              manufacturerName={item.offerType === 'manufacturer' ? item.sellerName : undefined}
-              showStore={false}
-              showDescription={false}
-              onAddToCart={() => addToCart(item.offerType, item.offer.id, 1)}
-            />
-          </View>
-        ))}
+        {[...storeOffers.map((item) => ({ ...item, offerType: 'store' as const })), ...manufacturerOffers.map((item) => ({ ...item, offerType: 'manufacturer' as const }))].map((item) => {
+          const cartItem = cart.find((entry) => entry.offerType === item.offerType && entry.offerId === item.offer.id);
+          return (
+            <View key={`${item.offerType}-${item.offer.id}`} style={styles.offerCard}>
+              <Text style={styles.storeName}>{item.sellerName}</Text>
+              <Text style={styles.offerPrice}>{item.offer.pharmacyPriceAfterDiscount} EGP</Text>
+              {item.offer.consumerPrice > item.offer.pharmacyPriceAfterDiscount && (
+                <Text style={styles.offerOldPrice}>{item.offer.consumerPrice} EGP</Text>
+              )}
+              {item.offer.discountPercentage > 0 && (
+                <Text style={styles.offerDiscount}>-{item.offer.discountPercentage}%</Text>
+              )}
+              <ProductCard
+                product={product}
+                offer={item.offer}
+                store={item.offerType === 'store' ? database.getStoreById(item.offer.storeId) : undefined}
+                manufacturerName={item.offerType === 'manufacturer' ? item.sellerName : undefined}
+                showStore={false}
+                showDescription={false}
+                cartQuantity={cartItem?.quantity ?? 0}
+                maxQuantity={item.offer.stockQuantity}
+                onAddToCart={() => addToCart(item.offerType, item.offer.id, 1)}
+                onIncreaseQuantity={() => updateQuantity(item.offerType, item.offer.id, (cartItem?.quantity ?? 0) + 1)}
+                onDecreaseQuantity={() => updateQuantity(item.offerType, item.offer.id, (cartItem?.quantity ?? 1) - 1)}
+              />
+            </View>
+          );
+        })}
       </ScrollView>
     </View>
   );

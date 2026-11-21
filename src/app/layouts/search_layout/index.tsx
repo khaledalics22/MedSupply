@@ -29,7 +29,7 @@ export default function Search({ language, categoryType, notificationsCount = 0,
   const [sortMode, setSortMode] = useState<'none' | 'priceAsc' | 'discount'>('none');
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [selectedTypes, setSelectedTypes] = useState({ product: true, store: true, factory: true });
-  const { addToCart, cartCount } = useAppState();
+  const { cart, addToCart, updateQuantity, cartCount } = useAppState();
 
   const items = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -103,14 +103,19 @@ export default function Search({ language, categoryType, notificationsCount = 0,
               const candidate = candidates[0];
               const store = candidate.offerType === 'store' ? database.getStoreById(candidate.offer.storeId) : undefined;
               const manufacturerName = candidate.offerType === 'manufacturer' ? database.getFactoryById(candidate.offer.manufacturerId)?.name : undefined;
+              const cartItem = cart.find((entry) => entry.offerType === candidate.offerType && entry.offerId === candidate.offer.id);
               return (
                 <ProductCard
                   product={product}
                   offer={candidate.offer}
                   store={store}
                   manufacturerName={manufacturerName}
+                  cartQuantity={cartItem?.quantity ?? 0}
+                  maxQuantity={candidate.offer.stockQuantity}
                   onPress={() => onProductSelected?.(product.id)}
                   onAddToCart={() => addToCart(candidate.offerType, candidate.offer.id, 1)}
+                  onIncreaseQuantity={() => updateQuantity(candidate.offerType, candidate.offer.id, (cartItem?.quantity ?? 0) + 1)}
+                  onDecreaseQuantity={() => updateQuantity(candidate.offerType, candidate.offer.id, (cartItem?.quantity ?? 1) - 1)}
                 />
               );
             }
