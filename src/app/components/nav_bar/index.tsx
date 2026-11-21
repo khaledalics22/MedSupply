@@ -1,23 +1,30 @@
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-export type Tab = 'home' | 'search';
+import { LanguageCode, t } from '../../i18n';
+import styles from './styles';
+
+export type Tab = 'home' | 'search' | 'cart' | 'orders' | 'profile';
 
 type NavBarProps = {
   active: Tab;
+  language: LanguageCode;
   onChange: (tab: Tab) => void;
 };
 
 const ACTIVE_COLOR = '#208AEF';
 const INACTIVE_COLOR = '#8E8E93';
 
-const tabs: { key: Tab; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { key: 'home', label: 'Home', icon: 'home' },
-  { key: 'search', label: 'Search', icon: 'search' },
-];
+export default function NavBar({ active, language, onChange }: NavBarProps) {
+  const tabs: { key: Tab; icon: keyof typeof Ionicons.glyphMap; label: string }[] = [
+    { key: 'home', icon: 'home', label: t('home', language) },
+    { key: 'search', icon: 'search', label: t('search', language) },
+    { key: 'cart', icon: 'cart', label: 'Cart' },
+    { key: 'orders', icon: 'receipt', label: 'Orders' },
+    { key: 'profile', icon: 'person', label: 'Profile' },
+  ];
 
-export default function NavBar({ active, onChange }: NavBarProps) {
   return (
     <SafeAreaView edges={['bottom']} style={styles.container}>
       <View style={styles.row}>
@@ -38,23 +45,3 @@ export default function NavBar({ active, onChange }: NavBarProps) {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#ddd',
-    backgroundColor: '#fff',
-  },
-  row: {
-    flexDirection: 'row',
-  },
-  tab: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 8,
-    gap: 2,
-  },
-  label: {
-    fontSize: 12,
-  },
-});

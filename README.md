@@ -14,6 +14,12 @@ docker run -it \
 #start docker 
 docker start -ai MedSupply
 
+#attach to running docker 
+docker exec -it MedSupply bash
+
+#go to project directory
+cd workspace/MedSupply
+
 #setup docker 
 
 apt-get update
@@ -21,7 +27,7 @@ apt-get install -y curl ca-certificates
 
 curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
 apt-get install -y nodejs
-
+apt-get install -y libatomic1
 
 export EXPO_TOKEN="xWtAsceTmH_JTtPhQ7xut48Ea7a6SrZ-2zHwXTFE"
 

@@ -1,0 +1,163 @@
+import { Ionicons } from '@expo/vector-icons';
+import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useMemo, useState } from 'react';
+
+import ProductCard from '../../components/product_card';
+import { type LanguageCode } from '../../i18n';
+import { iocContainer } from '../../models/ioc_container';
+import { useAppState } from '../../state/app_state';
+import styles from './styles';
+
+export default function StoreDetailLayout({
+  storeId,
+  language,
+  onBack,
+  onProductSelected,
+}: {
+  storeId: string;
+  language: LanguageCode;
+  onBack: () => void;
+  onProductSelected?: (productId: string) => void;
+}) {
+  const database = iocContainer.getDatabase();
+  const { addToCart, favoriteStores, toggleFavoriteStore, orders } = useAppState();
+  const [tab, setTab] = useState<'medicines' | 'pending' | 'my-orders'>('medicines');
+
+  const store = database.getStoreById(storeId);
+
+  const offers = useMemo(
+    () =>
+      database
+        .getStoreOffersByStore(storeId)
+        .map((offer) => ({
+          offer,
+          product: database.getProductById(offer.productId),
+          store,
+        }))
+        .filter((value): value is NonNullable<typeof value> => Boolean(value.product && value.store)),
+    [database, store, storeId],
+  );
+
+  const pendingOrders = useMemo(
+    () => orders.filter((order) => order.sellerType === 'store' && order.sellerId === storeId && order.status === 'pending'),
+    [orders, storeId],
+  );
+
+  const deliveredOrders = useMemo(
+    () => orders.filter((order) => order.sellerType === 'store' && order.sellerId === storeId && order.status === 'delivered'),
+    [orders, storeId],
+  );
+
+  if (!store) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={onBack} style={styles.backButton} activeOpacity={0.8}>
+            <Ionicons name="arrow-back" size={20} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.title}>Store not found</Text>
+        </View>
+      </View>
+    );
+  }
+
+  const isFavorite = favoriteStores.includes(storeId);
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={onBack} style={styles.backButton} activeOpacity={0.8}>
+          <Ionicons name="arrow-back" size={20} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.title}>{store.name}</Text>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.imageWrap}>
+          <Image source={{ uri: store.image ?? 'https://picsum.photos/seed/store/240' }} style={styles.image} />
+          <TouchableOpacity style={styles.favoriteButton} activeOpacity={0.8} onPress={() => toggleFavoriteStore(storeId)}>
+            <Ionicons name={isFavorite ? 'heart' : 'heart-outline'} size={18} color={isFavorite ? '#FF4D67' : '#fff'} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.infoCard}>
+          <Text style={styles.storeName}>{store.name}</Text>
+          <Text style={styles.storeDescription}>{store.description ?? 'No description available.'}</Text>
+          <Text style={styles.detailText}>{store.address ?? 'Address unavailable'}</Text>
+          <Text style={styles.detailText}>Rating: {store.rating ?? 0}/5</Text>
+        </View>
+
+        <View style={styles.tabs}>
+          {[
+            { key: 'medicines', label: 'Medicines' },
+            { key: 'pending', label: 'Pending Orders' },
+            { key: 'my-orders', label: 'My Orders' },
+          ].map((item) => (
+            <TouchableOpacity
+              key={item.key}
+              activeOpacity={0.8}
+              onPress={() => setTab(item.key as 'medicines' | 'pending' | 'my-orders')}
+              style={[styles.tab, tab === item.key && styles.tabActive]}>
+              <Text style={[styles.tabText, tab === item.key && styles.tabTextActive]}>{item.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {tab === 'medicines' && (
+          <View style={styles.listWrap}>
+            {offers.length === 0 ? (
+              <Text style={styles.emptyState}>No products available for this store.</Text>
+            ) : (
+              offers.map(({ product, offer, store: storeInfo }) => (
+                <ProductCard
+                  key={offer.id}
+                  product={product!}
+                  offer={offer}
+                  store={storeInfo}
+                  onPress={() => onProductSelected?.(product!.id)}
+                  onAddToCart={() => addToCart('store', offer.id, 1)}
+                />
+              ))
+            )}
+          </View>
+        )}
+
+        {tab === 'pending' && (
+          <View style={styles.listWrap}>
+            {pendingOrders.length === 0 ? (
+              <Text style={styles.emptyState}>No pending orders.</Text>
+            ) : (
+              pendingOrders.map((order) => (
+                <View key={order.id} style={styles.orderCard}>
+                  <Text style={styles.orderId}>{order.id}</Text>
+                  <Text style={styles.orderMeta}>{order.createdAt}</Text>
+                  <Text style={styles.orderMeta}>{order.totalItems} items</Text>
+                  <Text style={styles.orderMeta}>{order.totalPrice} EGP</Text>
+                  <Text style={styles.orderStatus}>{order.status}</Text>
+                </View>
+              ))
+            )}
+          </View>
+        )}
+
+        {tab === 'my-orders' && (
+          <View style={styles.listWrap}>
+            {deliveredOrders.length === 0 ? (
+              <Text style={styles.emptyState}>No previous orders.</Text>
+            ) : (
+              deliveredOrders.map((order) => (
+                <View key={order.id} style={styles.orderCard}>
+                  <Text style={styles.orderId}>{order.id}</Text>
+                  <Text style={styles.orderMeta}>{order.createdAt}</Text>
+                  <Text style={styles.orderMeta}>{order.totalItems} items</Text>
+                  <Text style={styles.orderMeta}>{order.totalPrice} EGP</Text>
+                  <Text style={styles.orderStatus}>{order.status}</Text>
+                </View>
+              ))
+            )}
+          </View>
+        )}
+      </ScrollView>
+    </View>
+  );
+}
