@@ -17,7 +17,6 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 15,
-    
     color: '#1E2A39',
     marginTop: 8,
   },
@@ -44,7 +43,6 @@ const styles = StyleSheet.create({
   },
   price: {
     fontSize: 14,
-    
     color: '#208AEF',
     fontWeight: '700',
   },
@@ -55,7 +53,6 @@ const styles = StyleSheet.create({
   },
   discountBadge: {
     fontSize: 11,
-    
     color: '#16A34A',
     backgroundColor: '#EAFBF1',
     paddingHorizontal: 8,
@@ -100,6 +97,18 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     color: '#fff',
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  unavailableButton: {
+    backgroundColor: '#EEF2F6',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  unavailableText: {
+    color: '#667085',
     fontWeight: '600',
     fontSize: 12,
   },

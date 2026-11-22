@@ -13,22 +13,18 @@ import styles from "./styles";
 
 type HomeProps = {
   language: LanguageCode;
-  cartCount?: number;
   notificationsCount?: number;
   onLanguageChange: (language: LanguageCode) => void;
   onCategorySelected: (type: CategoryType) => void;
-  onCartPress?: () => void;
   onNotificationsPress?: () => void;
   onSearchPress?: () => void;
 };
 
 export default function Home({
   language,
-  cartCount = 0,
   notificationsCount = 0,
   onLanguageChange,
   onCategorySelected,
-  onCartPress,
   onNotificationsPress,
   onSearchPress,
 }: HomeProps) {
@@ -120,12 +116,9 @@ export default function Home({
         <AppHeader
           title="MedSupply"
           language={language}
-          cartCount={cartCount}
-          notificationsCount={notificationsCount}
           onLanguageToggle={() =>
             onLanguageChange(language === "en" ? "ar" : "en")
           }
-          onCartPress={onCartPress}
           onNotificationsPress={onNotificationsPress}
         />
         <SearchBar

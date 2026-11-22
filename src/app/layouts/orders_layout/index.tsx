@@ -9,11 +9,9 @@ import styles from './styles';
 export default function OrdersLayout({
   language,
   onBack,
-  onCartPress,
 }: {
   language: LanguageCode;
   onBack: () => void;
-  onCartPress?: () => void;
 }) {
   const { orders } = useAppState();
   const [tab, setTab] = useState<'pending' | 'delivered'>('pending');

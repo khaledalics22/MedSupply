@@ -5,8 +5,6 @@ import type {
   Product,
   Specialty,
   Store,
-  StoreProductOffer,
-  ManufacturerProductOffer,
 } from '../models/data_types';
 
 export enum CategoryType {
@@ -55,16 +53,7 @@ export type Medicine = {
   stock: number;
 };
 
-export type {
-  CartItem,
-  Factory,
-  Pharmacy,
-  Product,
-  Specialty,
-  Store,
-  StoreProductOffer,
-  ManufacturerProductOffer,
-};
+export type { CartItem, Factory, Pharmacy, Product, Specialty, Store };
 
 export type Item =
   | Medicine

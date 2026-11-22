@@ -14,10 +14,8 @@ export default function NotificationsLayout({ language, onBack }: { language: La
         title="Notifications"
         onBack={onBack}
         language={language}
-        cartCount={0}
         notificationsCount={unreadNotifications}
         onLanguageToggle={() => {}}
-        onCartPress={undefined}
         onNotificationsPress={onBack}
       />
 

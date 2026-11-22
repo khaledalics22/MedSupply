@@ -4,21 +4,15 @@ import { LanguageCode } from '../i18n';
 import { iocContainer } from '../models/ioc_container';
 import type { CartItem, Order, OrderLineSnapshot } from '../models/data_types';
 
-export type NotificationItem = {
-  id: string;
-  title: string;
-  message: string;
-  read: boolean;
-  createdAt: string;
-};
+export type NotificationItem = { id: string; title: string; message: string; read: boolean; createdAt: string };
 
 type AppStateContextValue = {
   language: LanguageCode;
   setLanguage: (language: LanguageCode) => void;
   cart: CartItem[];
-  addToCart: (offerType: 'store' | 'manufacturer', offerId: string, quantity?: number) => void;
-  updateQuantity: (offerType: 'store' | 'manufacturer', offerId: string, quantity: number) => void;
-  removeFromCart: (offerType: 'store' | 'manufacturer', offerId: string) => void;
+  addToCart: (productId: string, quantity?: number) => void;
+  updateQuantity: (productId: string, quantity: number) => void;
+  removeFromCart: (productId: string) => void;
   cartTotal: number;
   cartCount: number;
   notifications: NotificationItem[];
@@ -45,60 +39,38 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [favoriteStores, setFavoriteStores] = useState<string[]>(['store-1']);
   const [orders, setOrders] = useState<Order[]>([]);
 
-  const addToCart = (offerType: 'store' | 'manufacturer', offerId: string, quantity = 1) => {
+  const addToCart = (productId: string, quantity = 1) => {
     const database = iocContainer.getDatabase();
 
     setCart((previous) => {
-      const existing = previous.find((item) => item.offerType === offerType && item.offerId === offerId);
+      const product = database.getProductById(productId);
+      if (!product || !product.isAvailable || product.stockQuantity < quantity) throw new Error('Requested product is unavailable');
 
+      const existing = previous.find((item) => item.productId === productId);
       if (existing) {
-        const maxQuantity = offerType === 'store'
-          ? database.getStoreOfferById(offerId)?.stockQuantity
-          : database.getManufacturerOfferById(offerId)?.stockQuantity;
-
-        if (existing.quantity + quantity > (maxQuantity ?? 0)) {
-          throw new Error('Requested quantity exceeds available stock');
-        }
-
-        return previous.map((item) =>
-          item.offerType === offerType && item.offerId === offerId
-            ? { ...item, quantity: item.quantity + quantity }
-            : item,
-        );
+        if (existing.quantity + quantity > product.stockQuantity) throw new Error('Requested quantity exceeds available stock');
+        return previous.map((item) => item.productId === productId ? { ...item, quantity: item.quantity + quantity } : item);
       }
 
-      const item = database.createCartItem(offerType, offerId, quantity);
-      return [...previous, item];
+      return [...previous, database.createCartItem(productId, quantity)];
     });
   };
 
-  const updateQuantity = (offerType: 'store' | 'manufacturer', offerId: string, quantity: number) => {
+  const updateQuantity = (productId: string, quantity: number) => {
     if (quantity < 0) return;
 
     setCart((previous) => {
-      if (quantity === 0) {
-        return previous.filter((item) => !(item.offerType === offerType && item.offerId === offerId));
-      }
+      if (quantity === 0) return previous.filter((item) => item.productId !== productId);
 
-      const database = iocContainer.getDatabase();
-      const maxQuantity = offerType === 'store'
-        ? database.getStoreOfferById(offerId)?.stockQuantity
-        : database.getManufacturerOfferById(offerId)?.stockQuantity;
+      const product = iocContainer.getDatabase().getProductById(productId);
+      if (!product || !product.isAvailable || quantity > product.stockQuantity) throw new Error('Requested quantity exceeds available stock');
 
-      if (!maxQuantity || quantity > maxQuantity) {
-        throw new Error('Requested quantity exceeds available stock');
-      }
-
-      return previous.map((item) =>
-        item.offerType === offerType && item.offerId === offerId
-          ? { ...item, quantity }
-          : item,
-      );
+      return previous.map((item) => item.productId === productId ? { ...item, quantity } : item);
     });
   };
 
-  const removeFromCart = (offerType: 'store' | 'manufacturer', offerId: string) => {
-    setCart((previous) => previous.filter((item) => !(item.offerType === offerType && item.offerId === offerId)));
+  const removeFromCart = (productId: string) => {
+    setCart((previous) => previous.filter((item) => item.productId !== productId));
   };
 
   const createOrder = (): boolean => {
@@ -108,23 +80,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
     try {
       for (const item of cart) {
-        if (item.offerType === 'store') {
-          const offer = database.getStoreOfferById(item.offerId);
-          if (!offer || !offer.isAvailable || offer.stockQuantity < item.quantity) return false;
-        } else {
-          const offer = database.getManufacturerOfferById(item.offerId);
-          if (!offer || !offer.isAvailable || offer.stockQuantity < item.quantity) return false;
-        }
+        const product = database.getProductById(item.productId);
+        if (!product || !product.isAvailable || product.stockQuantity < item.quantity) return false;
       }
 
-      for (const item of cart) {
-        database.deductOfferStock(item.offerType, item.offerId, item.quantity);
-      }
+      for (const item of cart) database.deductProductStock(item.productId, item.quantity);
 
       const grouped = new Map<string, Order>();
 
       for (const item of cart) {
-        const key = `${item.offerType}-${item.sellerId}`;
+        const key = `${item.sellerType}-${item.sellerId}`;
         const existing = grouped.get(key);
         const line: OrderLineSnapshot = {
           productId: item.productId,
@@ -147,7 +112,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         } else {
           grouped.set(key, {
             id: `ORD-${Date.now()}-${key}`,
-            sellerType: item.offerType,
+            sellerType: item.sellerType,
             sellerId: item.sellerId,
             sellerName: item.sellerName,
             items: [line],
@@ -181,21 +146,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const unreadNotifications = useMemo(() => notifications.filter((notification) => !notification.read).length, [notifications]);
 
   const value = useMemo<AppStateContextValue>(() => ({
-    language,
-    setLanguage,
-    cart,
-    addToCart,
-    updateQuantity,
-    removeFromCart,
-    cartTotal,
-    cartCount,
-    notifications,
-    unreadNotifications,
-    markNotificationRead,
-    orders,
-    createOrder,
-    favoriteStores,
-    toggleFavoriteStore,
+    language, setLanguage, cart, addToCart, updateQuantity, removeFromCart,
+    cartTotal, cartCount, notifications, unreadNotifications, markNotificationRead,
+    orders, createOrder, favoriteStores, toggleFavoriteStore,
   }), [language, cart, cartCount, cartTotal, notifications, unreadNotifications, orders, favoriteStores]);
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;

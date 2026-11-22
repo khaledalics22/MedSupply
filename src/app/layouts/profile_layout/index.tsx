@@ -6,8 +6,8 @@ import { iocContainer } from '../../models/ioc_container';
 import { useAppState } from '../../state/app_state';
 import styles from './styles';
 
-export default function ProfileLayout({ language, onBack, onCartPress }: { language: LanguageCode; onBack: () => void; onCartPress?: () => void }) {
-  const { favoriteStores, cartCount, unreadNotifications } = useAppState();
+export default function ProfileLayout({ language, onBack }: { language: LanguageCode; onBack: () => void }) {
+  const { favoriteStores, unreadNotifications } = useAppState();
   const database = iocContainer.getDatabase();
   const favoriteStoreItems = database.getStores().filter((store) => favoriteStores.includes(store.id));
 
@@ -16,11 +16,8 @@ export default function ProfileLayout({ language, onBack, onCartPress }: { langu
       <AppHeader
         title="Profile"
         language={language}
-        cartCount={cartCount}
         notificationsCount={unreadNotifications}
         onLanguageToggle={() => {}}
-        onCartPress={onCartPress}
-        onNotificationsPress={() => {}}
       />
 
       <View style={styles.panel}>

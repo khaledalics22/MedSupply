@@ -36,7 +36,7 @@ export default function CheckoutLayout({
           <Text style={styles.empty}>Your cart is empty.</Text>
         ) : (
           cart.map((item) => (
-            <View key={`${item.offerType}-${item.offerId}`} style={styles.row}>
+            <View key={item.productId} style={styles.row}>
               <Text style={styles.label}>{item.productName} x {item.quantity}</Text>
               <Text style={styles.value}>{item.quantity * item.unitPrice} EGP</Text>
             </View>

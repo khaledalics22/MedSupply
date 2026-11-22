@@ -44,12 +44,11 @@ export default StyleSheet.create({
     paddingBottom: 8,
     color: '#208AEF',
     fontSize: 15,
-    
+    fontWeight: '700',
   },
   menuOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderTopWidth: 1,
@@ -124,5 +123,41 @@ export default StyleSheet.create({
     textAlign: 'center',
     color: '#666',
     paddingVertical: 20,
+  },
+  sellerResultCard: {
+    backgroundColor: '#F5F9FF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E7EEF9',
+    padding: 12,
+    marginBottom: 12,
+  },
+  sellerResultHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  sellerResultName: {
+    fontSize: 15,
+    color: '#1E2A39',
+    fontWeight: '700',
+  },
+  sellerResultCount: {
+    fontSize: 11,
+    color: '#16A34A',
+    backgroundColor: '#EAFBF1',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  sellerResultDescription: {
+    fontSize: 12,
+    color: '#667085',
+    marginTop: 6,
+  },
+  sellerResultMeta: {
+    fontSize: 12,
+    color: '#208AEF',
+    marginTop: 6,
   },
 });

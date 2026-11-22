@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { View } from 'react-native';
+import { useRef, useState } from 'react';
+import { Animated, View } from 'react-native';
 
 import NavBar, { Tab } from './components/nav_bar';
 import CartLayout from './layouts/cart_layout';
@@ -32,6 +32,8 @@ function AppContent() {
   const [showCart, setShowCart] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
+  const [navVisible, setNavVisible] = useState(true);
+  const lastScrollY = useRef(0);
   const { language, setLanguage, cartCount, unreadNotifications } = useAppState();
 
   const clearSectionState = () => {
@@ -107,17 +109,18 @@ function AppContent() {
     }
 
     if (tab === 'home') {
-      return <Home language={language} cartCount={cartCount} notificationsCount={unreadNotifications} onLanguageChange={setLanguage} onCategorySelected={setSelectedCategory} onCartPress={() => setShowCart(true)} onNotificationsPress={() => setShowNotifications(true)} onSearchPress={() => setTab('search')} />;
+      return <Home language={language} notificationsCount={unreadNotifications} onLanguageChange={setLanguage} onCategorySelected={setSelectedCategory} onNotificationsPress={() => setShowNotifications(true)} onSearchPress={() => setTab('search')} />;
     }
 
     if (tab === 'search') {
-      return <Search language={language} notificationsCount={unreadNotifications} categoryType={undefined} onProductSelected={(productId) => setSelectedProductId(productId)} onItemSelected={(item) => setSelectedItem(item)} onCartPress={() => setShowCart(true)} onNotificationsPress={() => setShowNotifications(true)} />;
+      return <Search language={language} notificationsCount={unreadNotifications} categoryType={undefined} onProductSelected={(productId) => setSelectedProductId(productId)} onItemSelected={(item) => setSelectedItem(item)} onNotificationsPress={() => setShowNotifications(true)} />;
+
     }
 
     if (tab === 'cart') return <CartLayout onAddItems={() => setTab('search')} onCheckout={() => setShowCheckout(true)} />;
-    if (tab === 'orders') return <OrdersLayout language={language} onBack={() => setTab('home')} onCartPress={() => setShowCart(true)} />;
+    if (tab === 'orders') return <OrdersLayout language={language} onBack={() => setTab('home')} />;
 
-    return <ProfileLayout language={language} onBack={() => setTab('home')} onCartPress={() => setShowCart(true)} />;
+    return <ProfileLayout language={language} onBack={() => setTab('home')} />;
   };
 
   const showTabBar = !showCart && !showNotifications && !showCheckout && !selectedProductId && !selectedItem && !selectedSpecialtyId && !selectedCategory;

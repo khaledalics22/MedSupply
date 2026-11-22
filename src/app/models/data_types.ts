@@ -13,10 +13,11 @@ export interface Product {
   packageSize?: string;
   variant?: string;
   form?: string;
-  price?: number;
-  originalPrice?: number;
-  discountPercentage?: number;
-  availability?: 'available' | 'outOfStock';
+  consumerPrice: number;
+  discountPercentage: number;
+  pharmacyPriceAfterDiscount: number;
+  stockQuantity: number;
+  isAvailable: boolean;
 }
 
 export interface Specialty {
@@ -55,34 +56,9 @@ export interface Factory extends Producer {
   productionCapacity: string;
 }
 
-export interface StoreProductOffer {
-  id: string;
-  storeId: string;
-  productId: string;
-  consumerPrice: number;
-  discountPercentage: number;
-  pharmacyPriceAfterDiscount: number;
-  stockQuantity: number;
-  isAvailable: boolean;
-}
-
-export interface ManufacturerProductOffer {
-  id: string;
-  manufacturerId: string;
-  productId: string;
-  consumerPrice: number;
-  discountPercentage: number;
-  pharmacyPriceAfterDiscount: number;
-  stockQuantity: number;
-  isAvailable: boolean;
-}
-
-export type ProductOffer = StoreProductOffer | ManufacturerProductOffer;
-
 export interface CartItem {
   id: string;
-  offerId: string;
-  offerType: 'store' | 'manufacturer';
+  sellerType: 'store' | 'manufacturer';
   sellerId: string;
   sellerName: string;
   productId: string;

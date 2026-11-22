@@ -70,4 +70,9 @@ export default StyleSheet.create({
   listWrap: {
     gap: 12,
   },
+  emptyState: {
+    textAlign: 'center',
+    color: '#667085',
+    paddingVertical: 20,
+  },
 });

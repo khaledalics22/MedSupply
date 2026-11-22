@@ -8,9 +8,7 @@ type AppHeaderProps = {
   title?: string;
   language?: LanguageCode;
   onLanguageToggle?: () => void;
-  cartCount?: number;
   notificationsCount?: number;
-  onCartPress?: () => void;
   onNotificationsPress?: () => void;
   onBack?: () => void;
 };
@@ -19,9 +17,7 @@ export default function AppHeader({
   title,
   language,
   onLanguageToggle,
-  cartCount = 0,
   notificationsCount = 0,
-  onCartPress,
   onNotificationsPress,
   onBack,
 }: AppHeaderProps) {
@@ -62,21 +58,6 @@ export default function AppHeader({
             {notificationsCount > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>{notificationsCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        )}
-
-        {onCartPress && (
-          <TouchableOpacity
-            style={styles.cartButton}
-            onPress={onCartPress}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="cart-outline" size={20} color="#fff" />
-            {cartCount > 0 && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{cartCount}</Text>
               </View>
             )}
           </TouchableOpacity>

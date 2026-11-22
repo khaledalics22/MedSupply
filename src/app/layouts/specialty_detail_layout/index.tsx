@@ -22,33 +22,22 @@ export default function SpecialtyDetailLayout({ specialtyId, language, onBack, o
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={<Text style={styles.emptyState}>No matching products found.</Text>}
         renderItem={({ item }) => {
-          const storeOffer = database.getStoreOffersByProduct(item.id).find((offer) => offer.isAvailable && offer.stockQuantity > 0);
-          const manufacturerOffer = database.getManufacturerOffersByProduct(item.id).find((offer) => offer.isAvailable && offer.stockQuantity > 0);
-          const candidate = storeOffer
-            ? { offerType: 'store' as const, offer: storeOffer, store: database.getStoreById(storeOffer.storeId) }
-            : manufacturerOffer
-              ? { offerType: 'manufacturer' as const, offer: manufacturerOffer, store: undefined }
-              : undefined;
-          const cartItem = candidate ? cart.find((entry) => entry.offerType === candidate.offerType && entry.offerId === candidate.offer.id) : undefined;
-
+          const cartItem = cart.find((entry) => entry.productId === item.id);
+          const store = item.sellerType === 'store' ? database.getStoreById(item.sellerId) : undefined;
+          const manufacturerName = item.sellerType === 'manufacturer' ? database.getFactoryById(item.sellerId)?.name : undefined;
           return (
             <View style={styles.cardWrapper}>
-              {candidate ? (
-                <ProductCard
-                  product={item}
-                  offer={candidate.offer}
-                  store={candidate.store}
-                  manufacturerName={candidate.offerType === 'manufacturer' ? database.getFactoryById(candidate.offer.manufacturerId)?.name : undefined}
-                  cartQuantity={cartItem?.quantity ?? 0}
-                  maxQuantity={candidate.offer.stockQuantity}
-                  onPress={() => onProductSelected(item.id)}
-                  onAddToCart={() => addToCart(candidate.offerType, candidate.offer.id, 1)}
-                  onIncreaseQuantity={() => updateQuantity(candidate.offerType, candidate.offer.id, (cartItem?.quantity ?? 0) + 1)}
-                  onDecreaseQuantity={() => updateQuantity(candidate.offerType, candidate.offer.id, (cartItem?.quantity ?? 1) - 1)}
-                />
-              ) : (
-                <ProductCard product={item} showStore={false} onPress={() => onProductSelected(item.id)} />
-              )}
+              <ProductCard
+                product={item}
+                store={store}
+                manufacturerName={manufacturerName}
+                cartQuantity={cartItem?.quantity ?? 0}
+                maxQuantity={item.stockQuantity}
+                onPress={() => onProductSelected(item.id)}
+                onAddToCart={() => addToCart(item.id, 1)}
+                onIncreaseQuantity={() => updateQuantity(item.id, (cartItem?.quantity ?? 0) + 1)}
+                onDecreaseQuantity={() => updateQuantity(item.id, (cartItem?.quantity ?? 1) - 1)}
+              />
             </View>
           );
         }}

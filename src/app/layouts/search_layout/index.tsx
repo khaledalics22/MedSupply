@@ -9,6 +9,7 @@ import { t, type LanguageCode } from '../../i18n';
 import { iocContainer } from '../../models/ioc_container';
 import { CategoryType } from '../../utils/types';
 import { useAppState } from '../../state/app_state';
+import { matchesAnySearch } from '../../utils/search';
 import styles from './styles';
 
 const database = iocContainer.getDatabase();
@@ -19,34 +20,52 @@ type SearchProps = {
   notificationsCount?: number;
   onProductSelected?: (productId: string) => void;
   onItemSelected?: (item: any) => void;
-  onCartPress?: () => void;
   onNotificationsPress?: () => void;
 };
 
-export default function Search({ language, categoryType, notificationsCount = 0, onProductSelected, onItemSelected, onCartPress, onNotificationsPress }: SearchProps) {
+export default function Search({ language, categoryType, notificationsCount = 0, onProductSelected, onItemSelected, onNotificationsPress }: SearchProps) {
   void categoryType;
   const [query, setQuery] = useState('');
   const [sortMode, setSortMode] = useState<'none' | 'priceAsc' | 'discount'>('none');
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [selectedTypes, setSelectedTypes] = useState({ product: true, store: true, factory: true });
-  const { cart, addToCart, updateQuantity, cartCount } = useAppState();
+  const { cart, addToCart, updateQuantity } = useAppState();
 
   const items = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    const productItems = selectedTypes.product ? database.getProducts().map((product) => ({ id: product.id, title: product.name, description: product.description ?? '', type: 'product' as const, raw: product })) : [];
-    const storeItems = selectedTypes.store ? database.getStores().map((store) => ({ id: store.id, title: store.name, description: store.description, type: 'store' as const, raw: store })) : [];
-    const factoryItems = selectedTypes.factory ? database.getFactories().map((factory) => ({ id: factory.id, title: factory.name, description: factory.description, type: 'factory' as const, raw: factory })) : [];
+    const productItems = selectedTypes.product
+      ? database.getProducts().map((product) => ({ id: product.id, title: product.name, description: product.description ?? '', type: 'product' as const, raw: product }))
+      : [];
+    const storeItems = selectedTypes.store
+      ? database.getStores().map((store) => ({ id: store.id, title: store.name, description: store.description, type: 'store' as const, raw: store }))
+      : [];
+    const factoryItems = selectedTypes.factory
+      ? database.getFactories().map((factory) => ({ id: factory.id, title: factory.name, description: factory.description, type: 'factory' as const, raw: factory }))
+      : [];
 
-    const filtered = [...productItems, ...storeItems, ...factoryItems].filter((item) => {
-      if (!normalizedQuery) return true;
-      return item.title.toLowerCase().includes(normalizedQuery) || item.description.toLowerCase().includes(normalizedQuery);
-    });
+    const filtered = [...productItems, ...storeItems, ...factoryItems].filter((item) =>
+      matchesAnySearch([
+        item.title,
+        item.description,
+        item.type === 'store' ? item.raw.address : undefined,
+        item.type === 'store' || item.type === 'factory' ? item.raw.phone : undefined,
+        item.type === 'product' ? item.raw.dosage : undefined,
+        item.type === 'product' ? item.raw.packageSize : undefined,
+      ], query),
+    );
 
     if (sortMode === 'priceAsc') {
-      return filtered.sort((left, right) => {
-        const leftPrice = left.type === 'product' ? left.raw.price ?? 0 : 0;
-        const rightPrice = right.type === 'product' ? right.raw.price ?? 0 : 0;
+      return [...filtered].sort((left, right) => {
+        const leftPrice = left.type === 'product' ? left.raw.pharmacyPriceAfterDiscount : 0;
+        const rightPrice = right.type === 'product' ? right.raw.pharmacyPriceAfterDiscount : 0;
         return leftPrice - rightPrice;
+      });
+    }
+
+    if (sortMode === 'discount') {
+      return [...filtered].sort((left, right) => {
+        const leftDiscount = left.type === 'product' ? left.raw.discountPercentage : 0;
+        const rightDiscount = right.type === 'product' ? right.raw.discountPercentage : 0;
+        return rightDiscount - leftDiscount;
       });
     }
 
@@ -60,7 +79,7 @@ export default function Search({ language, categoryType, notificationsCount = 0,
   return (
     <SafeAreaView edges={['top']} style={styles.container}>
       <View style={styles.header}>
-        <AppHeader title="Search" language={language} cartCount={cartCount} notificationsCount={notificationsCount} onLanguageToggle={() => {}} onCartPress={onCartPress} onNotificationsPress={onNotificationsPress} />
+        <AppHeader title="Search" language={language} notificationsCount={notificationsCount} onLanguageToggle={() => {}} onNotificationsPress={onNotificationsPress} />
         <SearchBar value={query} onChangeText={setQuery} placeholder={t('searchProducts', language)} placeholderTextColor="rgba(255,255,255,0.8)" showFilterButton onFilterPress={() => setShowFilterMenu((value) => !value)} />
       </View>
 
@@ -68,11 +87,12 @@ export default function Search({ language, categoryType, notificationsCount = 0,
         <View style={styles.dropDownMenu}>
           <Text style={styles.menuHeader}>Sort by</Text>
           {[
-            { label: 'All', value: 'none' as const },
+            { label: 'No Sort', value: 'none' as const },
             { label: 'Lower price', value: 'priceAsc' as const },
+            { label: 'Higher discount', value: 'discount' as const },
           ].map((option) => (
             <TouchableOpacity key={option.value} style={[styles.menuOption, sortMode === option.value && styles.menuOptionSelected]} onPress={() => { setSortMode(option.value); setShowFilterMenu(false); }}>
-              <Text style={styles.menuOptionText}>{option.label}</Text>
+              <Text style={[styles.menuOptionText, sortMode === option.value && styles.menuOptionTextSelected]}>{option.label}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -94,37 +114,40 @@ export default function Search({ language, categoryType, notificationsCount = 0,
         renderItem={({ item }) => {
           if (item.type === 'product') {
             const product = item.raw;
-            const candidates = [
-              ...database.getStoreOffersByProduct(product.id).filter((offer) => offer.isAvailable && offer.stockQuantity > 0).map((offer) => ({ offerType: 'store' as const, offer })),
-              ...database.getManufacturerOffersByProduct(product.id).filter((offer) => offer.isAvailable && offer.stockQuantity > 0).map((offer) => ({ offerType: 'manufacturer' as const, offer })),
-            ].sort((left, right) => left.offer.pharmacyPriceAfterDiscount - right.offer.pharmacyPriceAfterDiscount);
-
-            if (candidates.length > 0) {
-              const candidate = candidates[0];
-              const store = candidate.offerType === 'store' ? database.getStoreById(candidate.offer.storeId) : undefined;
-              const manufacturerName = candidate.offerType === 'manufacturer' ? database.getFactoryById(candidate.offer.manufacturerId)?.name : undefined;
-              const cartItem = cart.find((entry) => entry.offerType === candidate.offerType && entry.offerId === candidate.offer.id);
-              return (
-                <ProductCard
-                  product={product}
-                  offer={candidate.offer}
-                  store={store}
-                  manufacturerName={manufacturerName}
-                  cartQuantity={cartItem?.quantity ?? 0}
-                  maxQuantity={candidate.offer.stockQuantity}
-                  onPress={() => onProductSelected?.(product.id)}
-                  onAddToCart={() => addToCart(candidate.offerType, candidate.offer.id, 1)}
-                  onIncreaseQuantity={() => updateQuantity(candidate.offerType, candidate.offer.id, (cartItem?.quantity ?? 0) + 1)}
-                  onDecreaseQuantity={() => updateQuantity(candidate.offerType, candidate.offer.id, (cartItem?.quantity ?? 1) - 1)}
-                />
-              );
-            }
+            const cartItem = cart.find((entry) => entry.productId === product.id);
+            const store = product.sellerType === 'store' ? database.getStoreById(product.sellerId) : undefined;
+            const manufacturerName = product.sellerType === 'manufacturer' ? database.getFactoryById(product.sellerId)?.name : undefined;
+            return (
+              <ProductCard
+                product={product}
+                store={store}
+                manufacturerName={manufacturerName}
+                cartQuantity={cartItem?.quantity ?? 0}
+                maxQuantity={product.stockQuantity}
+                onPress={() => onProductSelected?.(product.id)}
+                onAddToCart={() => addToCart(product.id, 1)}
+                onIncreaseQuantity={() => updateQuantity(product.id, (cartItem?.quantity ?? 0) + 1)}
+                onDecreaseQuantity={() => updateQuantity(product.id, (cartItem?.quantity ?? 1) - 1)}
+              />
+            );
           }
 
+          const sellerProducts = item.type === 'store'
+            ? database.getProductsByStore(item.id)
+            : database.getProductsByManufacturer(item.id);
+          const availableCount = sellerProducts.filter((product) => product.isAvailable && product.stockQuantity > 0).length;
+
           return (
-            <TouchableOpacity activeOpacity={0.8} onPress={() => onItemSelected?.({ ...item.raw, type: item.type === 'store' ? 'store' : 'factory' })} style={{ paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#EEF4FF' }}>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: '#1F2A37' }}>{item.title}</Text>
-              <Text style={{ fontSize: 12, color: '#5D7285', marginTop: 4 }}>{item.description}</Text>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => onItemSelected?.({ ...item.raw, type: item.type === 'store' ? 'store' : 'factory' })}
+              style={styles.sellerResultCard}>
+              <View style={styles.sellerResultHeader}>
+                <Text style={styles.sellerResultName}>{item.title}</Text>
+                <Text style={styles.sellerResultCount}>{availableCount} available</Text>
+              </View>
+              <Text style={styles.sellerResultDescription} numberOfLines={2}>{item.description}</Text>
+              {'address' in item.raw && item.raw.address ? <Text style={styles.sellerResultMeta}>{item.raw.address}</Text> : null}
             </TouchableOpacity>
           );
         }}

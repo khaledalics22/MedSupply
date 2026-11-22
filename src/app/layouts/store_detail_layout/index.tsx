@@ -3,6 +3,8 @@ import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useMemo, useState } from 'react';
 
 import ProductCard from '../../components/product_card';
+import SearchBar from '../../components/search_bar';
+import { matchesAnySearch } from '../../utils/search';
 import { type LanguageCode } from '../../i18n';
 import { iocContainer } from '../../models/ioc_container';
 import { useAppState } from '../../state/app_state';
@@ -22,21 +24,15 @@ export default function StoreDetailLayout({
   const database = iocContainer.getDatabase();
   const { cart, addToCart, updateQuantity, favoriteStores, toggleFavoriteStore, orders } = useAppState();
   const [tab, setTab] = useState<'medicines' | 'pending' | 'my-orders'>('medicines');
+  const [productQuery, setProductQuery] = useState('');
 
   const store = database.getStoreById(storeId);
 
-  const offers = useMemo(
-    () =>
-      database
-        .getStoreOffersByStore(storeId)
-        .map((offer) => ({
-          offer,
-          product: database.getProductById(offer.productId),
-          store,
-        }))
-        .filter((value): value is NonNullable<typeof value> => Boolean(value.product && value.store)),
-    [database, store, storeId],
-  );
+  const products = useMemo(() => {
+    return database
+      .getProductsByStore(storeId)
+      .filter((product) => matchesAnySearch([product.name, product.description, product.dosage, product.packageSize], productQuery));
+  }, [database, storeId, productQuery]);
 
   const pendingOrders = useMemo(
     () => orders.filter((order) => order.sellerType === 'store' && order.sellerId === storeId && order.status === 'pending'),
@@ -105,23 +101,27 @@ export default function StoreDetailLayout({
 
         {tab === 'medicines' && (
           <View style={styles.listWrap}>
-            {offers.length === 0 ? (
+            <SearchBar
+              value={productQuery}
+              onChangeText={setProductQuery}
+              placeholder="Search store products..."
+            />
+            {products.length === 0 ? (
               <Text style={styles.emptyState}>No products available for this store.</Text>
             ) : (
-              offers.map(({ product, offer, store: storeInfo }) => {
-                const cartItem = cart.find((entry) => entry.offerType === 'store' && entry.offerId === offer.id);
+              products.map((product) => {
+                const cartItem = cart.find((entry) => entry.productId === product.id);
                 return (
                   <ProductCard
-                    key={offer.id}
-                    product={product!}
-                    offer={offer}
-                    store={storeInfo}
+                    key={product.id}
+                    product={product}
+                    store={store}
                     cartQuantity={cartItem?.quantity ?? 0}
-                    maxQuantity={offer.stockQuantity}
-                    onPress={() => onProductSelected?.(product!.id)}
-                    onAddToCart={() => addToCart('store', offer.id, 1)}
-                    onIncreaseQuantity={() => updateQuantity('store', offer.id, (cartItem?.quantity ?? 0) + 1)}
-                    onDecreaseQuantity={() => updateQuantity('store', offer.id, (cartItem?.quantity ?? 1) - 1)}
+                    maxQuantity={product.stockQuantity}
+                    onPress={() => onProductSelected?.(product.id)}
+                    onAddToCart={() => addToCart(product.id, 1)}
+                    onIncreaseQuantity={() => updateQuantity(product.id, (cartItem?.quantity ?? 0) + 1)}
+                    onDecreaseQuantity={() => updateQuantity(product.id, (cartItem?.quantity ?? 1) - 1)}
                   />
                 );
               })

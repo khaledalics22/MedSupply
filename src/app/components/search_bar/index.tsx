@@ -32,7 +32,6 @@ export default function SearchBar({
           placeholder={placeholder}
           placeholderTextColor={placeholderTextColor}
           style={styles.input}
-          pointerEvents="none"
         />
       </TouchableOpacity>
     

@@ -16,25 +16,19 @@ export default function BestPricesLayout({ language, onBack, onProductSelected }
   const [sortMode, setSortMode] = useState<'priceAsc' | 'discount'>('priceAsc');
 
   const cards = useMemo(() => {
-    const result: Array<{ key: string; offerType: 'store' | 'manufacturer'; offer: any; product: any; sellerName: string; store?: any }> = [];
-
-    for (const offer of database.getStoreOffers()) {
-      if (!offer.isAvailable || offer.stockQuantity <= 0) continue;
-      const product = database.getProductById(offer.productId);
-      const store = database.getStoreById(offer.storeId);
-      if (!product || product.sellerType !== 'store' || product.sellerId !== offer.storeId || !store) continue;
-      result.push({ key: `store-${offer.id}`, offerType: 'store', offer, product, sellerName: store.name, store });
-    }
-
-    for (const offer of database.getManufacturerOffers()) {
-      if (!offer.isAvailable || offer.stockQuantity <= 0) continue;
-      const product = database.getProductById(offer.productId);
-      const manufacturer = database.getFactoryById(offer.manufacturerId);
-      if (!product || product.sellerType !== 'manufacturer' || product.sellerId !== offer.manufacturerId || !manufacturer) continue;
-      result.push({ key: `manufacturer-${offer.id}`, offerType: 'manufacturer', offer, product, sellerName: manufacturer.name });
-    }
-
-    return result;
+    return database.getAvailableProducts()
+      .filter((product) => {
+        if (product.sellerType === 'store') return Boolean(database.getStoreById(product.sellerId));
+        return Boolean(database.getFactoryById(product.sellerId));
+      })
+      .map((product) => ({
+        key: product.id,
+        product,
+        sellerName: product.sellerType === 'store'
+          ? database.getStoreById(product.sellerId)?.name ?? 'Store'
+          : database.getFactoryById(product.sellerId)?.name ?? 'Manufacturer',
+        store: product.sellerType === 'store' ? database.getStoreById(product.sellerId) : undefined,
+      }));
   }, [database]);
 
   const filtered = useMemo(() => {
@@ -42,8 +36,8 @@ export default function BestPricesLayout({ language, onBack, onProductSelected }
     return cards
       .filter((card) => !normalized || card.product.name.toLowerCase().includes(normalized) || card.sellerName.toLowerCase().includes(normalized))
       .sort((left, right) => sortMode === 'priceAsc'
-        ? left.offer.pharmacyPriceAfterDiscount - right.offer.pharmacyPriceAfterDiscount
-        : right.offer.discountPercentage - left.offer.discountPercentage);
+        ? left.product.pharmacyPriceAfterDiscount - right.product.pharmacyPriceAfterDiscount
+        : right.product.discountPercentage - left.product.discountPercentage);
   }, [cards, query, sortMode]);
 
   return (
@@ -62,21 +56,20 @@ export default function BestPricesLayout({ language, onBack, onProductSelected }
         data={filtered}
         keyExtractor={(item) => item.key}
         contentContainerStyle={styles.listContent}
-        ListEmptyComponent={<Text style={styles.emptyState}>No matching offers found.</Text>}
+        ListEmptyComponent={<Text style={styles.emptyState}>No matching products found.</Text>}
         renderItem={({ item }) => {
-          const cartItem = cart.find((entry) => entry.offerType === item.offerType && entry.offerId === item.offer.id);
+          const cartItem = cart.find((entry) => entry.productId === item.product.id);
           return (
             <ProductCard
               product={item.product}
-              offer={item.offer}
               store={item.store}
-              manufacturerName={item.offerType === 'manufacturer' ? item.sellerName : undefined}
+              manufacturerName={item.product.sellerType === 'manufacturer' ? item.sellerName : undefined}
               cartQuantity={cartItem?.quantity ?? 0}
-              maxQuantity={item.offer.stockQuantity}
+              maxQuantity={item.product.stockQuantity}
               onPress={() => onProductSelected?.(item.product.id)}
-              onAddToCart={() => addToCart(item.offerType, item.offer.id, 1)}
-              onIncreaseQuantity={() => updateQuantity(item.offerType, item.offer.id, (cartItem?.quantity ?? 0) + 1)}
-              onDecreaseQuantity={() => updateQuantity(item.offerType, item.offer.id, (cartItem?.quantity ?? 1) - 1)}
+              onAddToCart={() => addToCart(item.product.id, 1)}
+              onIncreaseQuantity={() => updateQuantity(item.product.id, (cartItem?.quantity ?? 0) + 1)}
+              onDecreaseQuantity={() => updateQuantity(item.product.id, (cartItem?.quantity ?? 1) - 1)}
             />
           );
         }}

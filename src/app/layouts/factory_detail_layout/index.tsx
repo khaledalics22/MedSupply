@@ -1,10 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useMemo, useState } from 'react';
 import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import ProductCard from '../../components/product_card';
+import SearchBar from '../../components/search_bar';
 import { type LanguageCode } from '../../i18n';
 import { iocContainer } from '../../models/ioc_container';
 import { useAppState } from '../../state/app_state';
+import { matchesAnySearch } from '../../utils/search';
 import styles from './styles';
 
 export default function FactoryDetailLayout({
@@ -20,30 +23,30 @@ export default function FactoryDetailLayout({
 }) {
   const database = iocContainer.getDatabase();
   const { cart, addToCart, updateQuantity } = useAppState();
+  const [productQuery, setProductQuery] = useState('');
   const factory = database.getFactoryById(factoryId);
+
+  const products = useMemo(() => {
+    return database
+      .getProductsByManufacturer(factoryId)
+      .filter((product) => matchesAnySearch([product.name, product.description, product.dosage, product.packageSize], productQuery));
+  }, [database, factoryId, productQuery]);
 
   if (!factory) {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={onBack} style={styles.backButton} activeOpacity={0.8}>
-            <Ionicons name="arrow-back" size={20} color="#fff" />
-          </TouchableOpacity>
+          <TouchableOpacity onPress={onBack} style={styles.backButton} activeOpacity={0.8}><Ionicons name="arrow-back" size={20} color="#fff" /></TouchableOpacity>
           <Text style={styles.title}>Factory not found</Text>
         </View>
       </View>
     );
   }
 
-  const products = database.getProductsByManufacturer(factoryId);
-  const offers = database.getManufacturerOffersByManufacturer(factoryId);
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton} activeOpacity={0.8}>
-          <Ionicons name="arrow-back" size={20} color="#fff" />
-        </TouchableOpacity>
+        <TouchableOpacity onPress={onBack} style={styles.backButton} activeOpacity={0.8}><Ionicons name="arrow-back" size={20} color="#fff" /></TouchableOpacity>
         <Text style={styles.title}>{factory.name}</Text>
       </View>
 
@@ -59,26 +62,25 @@ export default function FactoryDetailLayout({
         </View>
 
         <Text style={styles.sectionTitle}>Factory products</Text>
+        <SearchBar value={productQuery} onChangeText={setProductQuery} placeholder="Search manufacturer products..." />
         <View style={styles.listWrap}>
           {products.map((product) => {
-            const offer = offers.find((candidate) => candidate.productId === product.id);
-            if (!offer) return null;
-            const cartItem = cart.find((entry) => entry.offerType === 'manufacturer' && entry.offerId === offer.id);
+            const cartItem = cart.find((entry) => entry.productId === product.id);
             return (
               <ProductCard
                 key={product.id}
                 product={product}
-                offer={offer}
                 manufacturerName={factory.name}
                 cartQuantity={cartItem?.quantity ?? 0}
-                maxQuantity={offer.stockQuantity}
+                maxQuantity={product.stockQuantity}
                 onPress={() => onProductSelected?.(product.id)}
-                onAddToCart={() => addToCart('manufacturer', offer.id, 1)}
-                onIncreaseQuantity={() => updateQuantity('manufacturer', offer.id, (cartItem?.quantity ?? 0) + 1)}
-                onDecreaseQuantity={() => updateQuantity('manufacturer', offer.id, (cartItem?.quantity ?? 1) - 1)}
+                onAddToCart={() => addToCart(product.id, 1)}
+                onIncreaseQuantity={() => updateQuantity(product.id, (cartItem?.quantity ?? 0) + 1)}
+                onDecreaseQuantity={() => updateQuantity(product.id, (cartItem?.quantity ?? 1) - 1)}
               />
             );
           })}
+          {products.length === 0 && <Text style={styles.emptyState}>No matching manufacturer products found.</Text>}
         </View>
       </ScrollView>
     </View>

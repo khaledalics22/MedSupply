@@ -33,15 +33,9 @@ export default function ProductDetailLayout({
     );
   }
 
-  const storeOffers = database.getStoreOffersByProduct(productId).map((offer) => ({
-    offer,
-    sellerName: database.getStoreById(offer.storeId)?.name ?? 'Store',
-  }));
-
-  const manufacturerOffers = database.getManufacturerOffersByProduct(productId).map((offer) => ({
-    offer,
-    sellerName: database.getFactoryById(offer.manufacturerId)?.name ?? 'Manufacturer',
-  }));
+  const cartItem = cart.find((entry) => entry.productId === product.id);
+  const store = product.sellerType === 'store' ? database.getStoreById(product.sellerId) : undefined;
+  const manufacturerName = product.sellerType === 'manufacturer' ? database.getFactoryById(product.sellerId)?.name : undefined;
 
   return (
     <View style={styles.container}>
@@ -63,37 +57,27 @@ export default function ProductDetailLayout({
           <Text style={styles.value}>{product.manufacturer ?? 'N/A'}</Text>
           <Text style={styles.label}>Dosage</Text>
           <Text style={styles.value}>{product.dosage ?? 'N/A'}</Text>
+          <Text style={styles.label}>Package</Text>
+          <Text style={styles.value}>{product.packageSize ?? 'Standard package'}</Text>
+          {product.variant ? (
+            <>
+              <Text style={styles.label}>Variant</Text>
+              <Text style={styles.value}>{product.variant}</Text>
+            </>
+          ) : null}
         </View>
 
-        <Text style={styles.sectionTitle}>Available offers</Text>
-        {[...storeOffers.map((item) => ({ ...item, offerType: 'store' as const })), ...manufacturerOffers.map((item) => ({ ...item, offerType: 'manufacturer' as const }))].map((item) => {
-          const cartItem = cart.find((entry) => entry.offerType === item.offerType && entry.offerId === item.offer.id);
-          return (
-            <View key={`${item.offerType}-${item.offer.id}`} style={styles.offerCard}>
-              <Text style={styles.storeName}>{item.sellerName}</Text>
-              <Text style={styles.offerPrice}>{item.offer.pharmacyPriceAfterDiscount} EGP</Text>
-              {item.offer.consumerPrice > item.offer.pharmacyPriceAfterDiscount && (
-                <Text style={styles.offerOldPrice}>{item.offer.consumerPrice} EGP</Text>
-              )}
-              {item.offer.discountPercentage > 0 && (
-                <Text style={styles.offerDiscount}>-{item.offer.discountPercentage}%</Text>
-              )}
-              <ProductCard
-                product={product}
-                offer={item.offer}
-                store={item.offerType === 'store' ? database.getStoreById(item.offer.storeId) : undefined}
-                manufacturerName={item.offerType === 'manufacturer' ? item.sellerName : undefined}
-                showStore={false}
-                showDescription={false}
-                cartQuantity={cartItem?.quantity ?? 0}
-                maxQuantity={item.offer.stockQuantity}
-                onAddToCart={() => addToCart(item.offerType, item.offer.id, 1)}
-                onIncreaseQuantity={() => updateQuantity(item.offerType, item.offer.id, (cartItem?.quantity ?? 0) + 1)}
-                onDecreaseQuantity={() => updateQuantity(item.offerType, item.offer.id, (cartItem?.quantity ?? 1) - 1)}
-              />
-            </View>
-          );
-        })}
+        <Text style={styles.sectionTitle}>Seller and purchase</Text>
+        <ProductCard
+          product={product}
+          store={store}
+          manufacturerName={manufacturerName}
+          cartQuantity={cartItem?.quantity ?? 0}
+          maxQuantity={product.stockQuantity}
+          onAddToCart={() => addToCart(product.id, 1)}
+          onIncreaseQuantity={() => updateQuantity(product.id, (cartItem?.quantity ?? 0) + 1)}
+          onDecreaseQuantity={() => updateQuantity(product.id, (cartItem?.quantity ?? 1) - 1)}
+        />
       </ScrollView>
     </View>
   );
