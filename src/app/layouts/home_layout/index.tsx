@@ -6,7 +6,7 @@ import AdvertisementCarousel from "../../components/advertisement_carousel";
 import AppHeader from "../../components/app_header";
 import CategoryItem from "../../components/category_item";
 import SearchBar from "../../components/search_bar";
-import { getLocalizedCategoryTitle, t, type LanguageCode } from "../../i18n";
+import { t, type LanguageCode } from "../../i18n";
 import { iocContainer } from "../../models/ioc_container";
 import { CategoryType } from "../../utils/types";
 import styles from "./styles";
@@ -120,6 +120,7 @@ export default function Home({
             onLanguageChange(language === "en" ? "ar" : "en")
           }
           onNotificationsPress={onNotificationsPress}
+          notificationsCount={notificationsCount}
         />
         <SearchBar
           value={query}

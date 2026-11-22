@@ -71,7 +71,6 @@ export default function Search({ language, categoryType, notificationsCount = 0,
   return (
     <SafeAreaView edges={['top']} style={styles.container}>
       <View style={styles.header}>
-        <AppHeader title="Search" />
         <SearchBar value={query} onChangeText={setQuery} placeholder={t('searchProducts', language)} placeholderTextColor="rgba(255,255,255,0.8)" showFilterButton onFilterPress={() => setShowFilterMenu((value) => !value)} />
       </View>
 
