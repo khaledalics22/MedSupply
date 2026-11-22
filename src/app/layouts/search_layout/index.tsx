@@ -53,14 +53,6 @@ export default function Search({ language, categoryType, notificationsCount = 0,
       ], query),
     );
 
-    if (sortMode === 'priceAsc') {
-      return [...filtered].sort((left, right) => {
-        const leftPrice = left.type === 'product' ? left.raw.pharmacyPriceAfterDiscount : 0;
-        const rightPrice = right.type === 'product' ? right.raw.pharmacyPriceAfterDiscount : 0;
-        return leftPrice - rightPrice;
-      });
-    }
-
     if (sortMode === 'discount') {
       return [...filtered].sort((left, right) => {
         const leftDiscount = left.type === 'product' ? left.raw.discountPercentage : 0;
@@ -79,7 +71,7 @@ export default function Search({ language, categoryType, notificationsCount = 0,
   return (
     <SafeAreaView edges={['top']} style={styles.container}>
       <View style={styles.header}>
-        <AppHeader title="Search" language={language} notificationsCount={notificationsCount} onLanguageToggle={() => {}} onNotificationsPress={onNotificationsPress} />
+        <AppHeader title="Search" />
         <SearchBar value={query} onChangeText={setQuery} placeholder={t('searchProducts', language)} placeholderTextColor="rgba(255,255,255,0.8)" showFilterButton onFilterPress={() => setShowFilterMenu((value) => !value)} />
       </View>
 
@@ -87,8 +79,7 @@ export default function Search({ language, categoryType, notificationsCount = 0,
         <View style={styles.dropDownMenu}>
           <Text style={styles.menuHeader}>Sort by</Text>
           {[
-            { label: 'No Sort', value: 'none' as const },
-            { label: 'Lower price', value: 'priceAsc' as const },
+            { label: 'No sort', value: 'none' as const },
             { label: 'Higher discount', value: 'discount' as const },
           ].map((option) => (
             <TouchableOpacity key={option.value} style={[styles.menuOption, sortMode === option.value && styles.menuOptionSelected]} onPress={() => { setSortMode(option.value); setShowFilterMenu(false); }}>
