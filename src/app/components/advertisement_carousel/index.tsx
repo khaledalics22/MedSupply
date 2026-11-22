@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Dimensions, ScrollView, Text, View } from 'react-native';
 
 import styles from './styles';
 
@@ -19,6 +19,8 @@ type AdvertisementCarouselProps = {
 
 export default function AdvertisementCarousel({ advertisements }: AdvertisementCarouselProps) {
   const [mounted, setMounted] = useState(false);
+  // card width should be the whole layout width on any phone 
+  const cardWidth = Math.max(360, Dimensions.get('window').width - 20);
 
   useEffect(() => {
     setMounted(true);
@@ -36,7 +38,9 @@ export default function AdvertisementCarousel({ advertisements }: AdvertisementC
           key={ad.id}
           style={[
             styles.card,
-            { backgroundColor: ad.backgroundColor ?? '#208AEF' },
+            { backgroundColor: ad.backgroundColor ?? '#208AEF',
+              width: cardWidth
+             },
           ]}>
           <View style={styles.cardContent}>
             <View style={styles.cardTopRow}>

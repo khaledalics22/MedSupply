@@ -10,7 +10,6 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
   card: {
-    width: '100%',
     height: 150,
     marginRight: 12,
     borderRadius: 16,
