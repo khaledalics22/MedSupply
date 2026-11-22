@@ -5,6 +5,13 @@ export default StyleSheet.create({
     flex: 1,
     backgroundColor: '#F4F8FF',
   },
+   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#208AEF',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
   panel: {
     backgroundColor: '#fff',
     borderRadius: 16,

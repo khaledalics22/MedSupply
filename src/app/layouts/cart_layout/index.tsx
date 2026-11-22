@@ -17,7 +17,6 @@ export default function CartLayout({
   if (cart.length === 0) {
     return (
       <View style={styles.container}>
-        <AppHeader title="Checkout List" />
         <View style={styles.emptyState}>
           <Text style={styles.emptyText}>Your cart is empty</Text>
           {onAddItems && (
@@ -36,7 +35,6 @@ export default function CartLayout({
 
   return (
     <View style={styles.container}>
-      <AppHeader title="Checkout Your List" />
       <FlatList
         data={cart}
         keyExtractor={(item) => item.productId}
@@ -58,14 +56,18 @@ export default function CartLayout({
               <Text style={styles.unitPrice}>{item.unitPrice} EGP</Text>
               <View style={styles.quantityRow}>
                 <TouchableOpacity
-                  onPress={() => updateQuantity(item.productId, item.quantity - 1)}
+                  onPress={() =>
+                    updateQuantity(item.productId, item.quantity - 1)
+                  }
                   style={styles.qtyButton}
                 >
                   <Text style={styles.qtyText}>-</Text>
                 </TouchableOpacity>
                 <Text style={styles.qtyValue}>{item.quantity}</Text>
                 <TouchableOpacity
-                  onPress={() => updateQuantity(item.productId, item.quantity + 1)}
+                  onPress={() =>
+                    updateQuantity(item.productId, item.quantity + 1)
+                  }
                   disabled={item.quantity >= (item.product?.stockQuantity ?? 0)}
                   style={styles.qtyButton}
                 >

@@ -20,8 +20,6 @@ export default function OrdersLayout({
 
   return (
     <View style={styles.container}>
-      <AppHeader title="My Orders" />
-
       <View style={styles.tabs}>
         <TouchableOpacity activeOpacity={0.8} onPress={() => setTab('pending')} style={[styles.tab, tab === 'pending' && styles.tabActive]}>
           <Text style={[styles.tabText, tab === 'pending' && styles.tabTextActive]}>Pending</Text>

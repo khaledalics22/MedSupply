@@ -6,7 +6,6 @@ export default StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#208AEF',
-    paddingHorizontal: 16,
     paddingVertical: 14,
   },
   headerRow: {
