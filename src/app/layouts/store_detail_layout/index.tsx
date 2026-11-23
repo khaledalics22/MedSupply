@@ -44,14 +44,14 @@ export default function StoreDetailLayout({
     [orders, storeId],
   );
 
-  if (!store) {
+  if (!store || store.status !== 'active') {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={onBack} style={styles.backButton} activeOpacity={0.8}>
             <Ionicons name="arrow-back" size={20} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.title}>Store not found</Text>
+          <Text style={styles.title}>{store ? 'Store is currently inactive' : 'Store not found'}</Text>
         </View>
       </View>
     );

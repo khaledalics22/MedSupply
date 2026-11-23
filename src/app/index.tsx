@@ -26,6 +26,10 @@ import { AuthStateProvider, useAuthState } from './state/auth_state';
 import styles from './styles/index.styles';
 import AuthLayout from './layouts/auth_layout';
 import AdminLayout from './layouts/admin_layout';
+import StoreManagementLayout from './layouts/store_management_layout';
+import StoreFormLayout from './layouts/store_form_layout';
+import AdminStoreDetailLayout from './layouts/admin_store_detail_layout';
+import { iocContainer } from './models/ioc_container';
 
 import { CategoryType, Item, ItemType } from './utils/types';
 
@@ -143,7 +147,9 @@ function AppContent() {
 export default function HomeScreen() {
   return (
     <AuthStateProvider>
-      <RoleBasedApp />
+      <AppStateProvider>
+        <RoleBasedApp />
+      </AppStateProvider>
     </AuthStateProvider>
   );
 }
@@ -163,8 +169,51 @@ function RoleBasedApp() {
   }
 
   if (!user) return <AuthLayout />;
-  if (user.role === 'admin') return <AdminLayout />;
+  if (user.role === 'admin') return <AdminApp />;
 
-  return <AppStateProvider><AppContent /></AppStateProvider>;
+  return <AppContent />;
+}
+
+function AdminApp() {
+  const [screen, setScreen] = useState<'dashboard' | 'list' | 'form' | 'detail'>('dashboard');
+  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
+  const [editingStoreId, setEditingStoreId] = useState<string | undefined>(undefined);
+  const [storeFeedback, setStoreFeedback] = useState('');
+
+  const openForm = (storeId?: string) => {
+    setEditingStoreId(storeId);
+    setScreen('form');
+  };
+
+  if (screen === 'list') {
+    return <StoreManagementLayout
+      onBack={() => setScreen('dashboard')}
+      onAddStore={() => openForm()}
+      onStoreSelected={(storeId) => { setSelectedStoreId(storeId); setScreen('detail'); }}
+      feedback={storeFeedback}
+    />;
+  }
+
+  if (screen === 'detail' && selectedStoreId) {
+    return <AdminStoreDetailLayout
+      storeId={selectedStoreId}
+      onBack={() => setScreen('list')}
+      onEdit={(storeId) => openForm(storeId)}
+    />;
+  }
+
+  if (screen === 'form') {
+    const store = editingStoreId ? iocContainer.getDatabase().getStoreById(editingStoreId) : undefined;
+    return <StoreFormLayout
+      store={store}
+      onBack={() => setScreen(editingStoreId ? 'detail' : 'list')}
+      onSaved={(message) => { setStoreFeedback(message); setScreen('list'); }}
+    />;
+  }
+
+  return <AdminLayout
+    onStoreManagement={() => setScreen('list')}
+    onAddStore={() => openForm()}
+  />;
 }
 

@@ -6,7 +6,7 @@ import { type LanguageCode } from '../../i18n';
 import styles from './styles';
 
 export default function StoresLayout({ language, onBack, onStoreSelected }: { language: LanguageCode; onBack: () => void; onStoreSelected: (storeId: string) => void }) {
-  const stores = iocContainer.getDatabase().getStores();
+  const stores = iocContainer.getDatabase().getActiveStores();
 
   return (
     <View style={styles.container}>

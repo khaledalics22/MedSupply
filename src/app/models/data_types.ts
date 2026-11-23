@@ -44,10 +44,14 @@ export interface Producer {
   phone: string;
 }
 
+export type StoreStatus = 'active' | 'inactive';
+
 export interface Store extends Producer {
   type: ProducerType.Store;
   openHours?: string;
   rating?: number;
+  contactPerson: string;
+  status: StoreStatus;
 }
 
 export interface Factory extends Producer {
@@ -92,6 +96,7 @@ export type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipped' | '
 
 export interface Order {
   id: string;
+  customerName?: string;
   sellerType: 'store' | 'manufacturer';
   sellerId: string;
   sellerName: string;
@@ -123,4 +128,14 @@ export interface Advertisement {
   image?: string;
   backgroundColor?: string;
   sortOrder?: number;
+}
+
+export interface StoreInput {
+  name: string;
+  contactPerson: string;
+  phone: string;
+  address: string;
+  description?: string;
+  image?: string;
+  status: StoreStatus;
 }

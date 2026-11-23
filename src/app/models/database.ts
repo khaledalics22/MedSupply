@@ -7,6 +7,7 @@ import {
   type Product,
   type Specialty,
   type Store,
+  type StoreInput,
 } from './data_types';
 
 export abstract class Database {
@@ -19,6 +20,10 @@ export abstract class Database {
   abstract getProductsByStore(storeId: string): Product[];
   abstract getProductsByManufacturer(manufacturerId: string): Product[];
   abstract getStores(): Store[];
+  abstract getActiveStores(): Store[];
+  abstract addStore(input: StoreInput): Store;
+  abstract updateStore(storeId: string, input: StoreInput): Store;
+  abstract setStoreStatus(storeId: string, status: 'active' | 'inactive'): Store;
   abstract getFactories(): Factory[];
   abstract getPharmacies(): Pharmacy[];
   abstract getProductById(productId: string): Product | undefined;
@@ -43,11 +48,11 @@ export class MockDatabase extends Database {
     { id: 'ophthalmic', name: 'عيون', description: 'منتجات العناية بالعيون', image: 'https://picsum.photos/seed/specialty-ophthalmic/100', isActive: true },
   ];
 
-  private readonly stores: Store[] = [
-    { id: 'store-1', type: ProducerType.Store, name: 'العزبي', description: 'صيدلية متكاملة توصل الأدوية والمستلزمات', image: 'https://picsum.photos/seed/store-azaby/100', address: '12 شارع النيل، القاهرة', phone: '+20 2 1234 4400', openHours: '8:00 ص - 12:00 م', rating: 4.8 },
-    { id: 'store-2', type: ProducerType.Store, name: 'الشفاء', description: 'مكملات ومنتجات صحية وعناية يومية', image: 'https://picsum.photos/seed/store-shifa/100', address: '78 طريق المطار، الجيزة', phone: '+20 2 2345 1010', openHours: '9:00 ص - 11:00 م', rating: 4.6 },
-    { id: 'store-3', type: ProducerType.Store, name: 'الصحة', description: 'أدوية ومستحضرات عناية ومستلزمات طبية', image: 'https://picsum.photos/seed/store-seha/100', address: '45 شارع التحرير، القاهرة', phone: '+20 2 3456 5678', openHours: '8:00 ص - 12:00 م', rating: 4.7 },
-    { id: 'store-4', type: ProducerType.Store, name: 'الدواء', description: 'منتجات عشبية وطبيعية ومستلزمات منزلية', image: 'https://picsum.photos/seed/store-dawa/100', address: '23 شارع المسيد، الرياض', phone: '+966 55 345 6789', openHours: '9:00 ص - 10:00 م', rating: 4.5 },
+  private stores: Store[] = [
+    { id: 'store-1', type: ProducerType.Store, name: 'العزبي', description: 'صيدلية متكاملة توصل الأدوية والمستلزمات', image: 'https://picsum.photos/seed/store-azaby/100', address: '12 شارع النيل، القاهرة', phone: '+20 2 1234 4400', contactPerson: 'Store Manager', status: 'active', openHours: '8:00 ص - 12:00 م', rating: 4.8 },
+    { id: 'store-2', type: ProducerType.Store, name: 'الشفاء', description: 'مكملات ومنتجات صحية وعناية يومية', image: 'https://picsum.photos/seed/store-shifa/100', address: '78 طريق المطار، الجيزة', phone: '+20 2 2345 1010', contactPerson: 'Store Manager', status: 'active', openHours: '9:00 ص - 11:00 م', rating: 4.6 },
+    { id: 'store-3', type: ProducerType.Store, name: 'الصحة', description: 'أدوية ومستحضرات عناية ومستلزمات طبية', image: 'https://picsum.photos/seed/store-seha/100', address: '45 شارع التحرير، القاهرة', phone: '+20 2 3456 5678', contactPerson: 'Store Manager', status: 'active', openHours: '8:00 ص - 12:00 م', rating: 4.7 },
+    { id: 'store-4', type: ProducerType.Store, name: 'الدواء', description: 'منتجات عشبية وطبيعية ومستلزمات منزلية', image: 'https://picsum.photos/seed/store-dawa/100', address: '23 شارع المسيد، الرياض', phone: '+966 55 345 6789', contactPerson: 'Store Manager', status: 'active', openHours: '9:00 ص - 10:00 م', rating: 4.5 },
   ];
 
   private readonly factories: Factory[] = [
@@ -107,11 +112,61 @@ export class MockDatabase extends Database {
   getSpecialties(): Specialty[] { return [...this.specialties]; }
   getSpecialtyById(specialtyId: string): Specialty | undefined { return this.specialties.find((item) => item.id === specialtyId); }
   getProducts(): Product[] { return [...this.products]; }
-  getAvailableProducts(): Product[] { return this.products.filter((product) => product.isAvailable && product.stockQuantity > 0); }
+  getAvailableProducts(): Product[] {
+    return this.products.filter((product) => {
+      if (!product.isAvailable || product.stockQuantity <= 0) return false;
+      if (product.sellerType === ProducerType.Store) {
+        const store = this.getStoreById(product.sellerId);
+        if (!store || store.status !== 'active') return false;
+      }
+      return true;
+    });
+  }
   getProductsBySpecialty(specialtyId: string): Product[] { return this.products.filter((product) => product.specialtyId === specialtyId); }
   getProductsByStore(storeId: string): Product[] { return this.products.filter((product) => product.sellerType === ProducerType.Store && product.sellerId === storeId); }
   getProductsByManufacturer(manufacturerId: string): Product[] { return this.products.filter((product) => product.sellerType === ProducerType.Manufacturer && product.sellerId === manufacturerId); }
   getStores(): Store[] { return [...this.stores]; }
+  getActiveStores(): Store[] { return this.stores.filter((store) => store.status === 'active').map((store) => ({ ...store })); }
+  addStore(input: StoreInput): Store {
+    const store: Store = {
+      id: `store-${Date.now()}`,
+      type: ProducerType.Store,
+      name: input.name.trim(),
+      description: input.description?.trim() || 'No description available',
+      image: input.image?.trim() || `https://picsum.photos/seed/store-${Date.now()}/100`,
+      address: input.address.trim(),
+      phone: input.phone.trim(),
+      contactPerson: input.contactPerson.trim(),
+      status: input.status,
+      rating: 0,
+      openHours: 'Not specified',
+    };
+    this.stores = [...this.stores, store];
+    return { ...store };
+  }
+  updateStore(storeId: string, input: StoreInput): Store {
+    const index = this.stores.findIndex((store) => store.id === storeId);
+    if (index < 0) throw new Error('Store not found');
+    const updated: Store = {
+      ...this.stores[index],
+      name: input.name.trim(),
+      contactPerson: input.contactPerson.trim(),
+      phone: input.phone.trim(),
+      address: input.address.trim(),
+      description: input.description?.trim() || 'No description available',
+      image: input.image?.trim() || this.stores[index].image,
+      status: input.status,
+    };
+    this.stores = this.stores.map((store) => store.id === storeId ? updated : store);
+    return { ...updated };
+  }
+  setStoreStatus(storeId: string, status: 'active' | 'inactive'): Store {
+    const index = this.stores.findIndex((store) => store.id === storeId);
+    if (index < 0) throw new Error('Store not found');
+    const updated = { ...this.stores[index], status };
+    this.stores = this.stores.map((store) => store.id === storeId ? updated : store);
+    return updated;
+  }
   getFactories(): Factory[] { return [...this.factories]; }
   getPharmacies(): Pharmacy[] { return [...this.pharmacies]; }
   getProductById(productId: string): Product | undefined { return this.products.find((product) => product.id === productId); }
@@ -158,6 +213,20 @@ export class MockDatabase extends Database {
 
 export default function DatabaseModule() { return null; }
 
+const mockDatabase = new MockDatabase();
+
 export const iocContainer = {
-  getDatabase: () => new MockDatabase(),
+  getDatabase: () => mockDatabase,
 };
+
+export function normalizeProductName(value: string): string {
+  return value.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+export function normalizeProductDosage(value: string): string {
+  return value.trim().replace(/\s+/g, '').toLowerCase();
+}
+
+export function normalizeProductKey(name: string, dosage?: string): string {
+  return `${normalizeProductName(name)}|${normalizeProductDosage(dosage ?? '')}`;
+}

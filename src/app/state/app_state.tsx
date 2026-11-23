@@ -3,6 +3,7 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from 're
 import { LanguageCode } from '../i18n';
 import { iocContainer } from '../models/ioc_container';
 import type { CartItem, Order, OrderLineSnapshot } from '../models/data_types';
+import { useAuthState } from './auth_state';
 
 export type NotificationItem = { id: string; title: string; message: string; read: boolean; createdAt: string };
 
@@ -33,6 +34,7 @@ const initialNotifications: NotificationItem[] = [
 ];
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuthState();
   const [language, setLanguage] = useState<LanguageCode>('en');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>(initialNotifications);
@@ -112,6 +114,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         } else {
           grouped.set(key, {
             id: `ORD-${Date.now()}-${key}`,
+            customerName: user?.fullName,
             sellerType: item.sellerType,
             sellerId: item.sellerId,
             sellerName: item.sellerName,
