@@ -93,6 +93,7 @@ export interface OrderLineSnapshot {
   variant?: string;
   sellerId: string;
   sellerName: string;
+  sellerType: 'store' | 'manufacturer';
   unitPrice: number;
   discountPercentage: number;
   quantity: number;
@@ -101,14 +102,14 @@ export interface OrderLineSnapshot {
   pharmacyPriceAfterDiscount?: number;
 }
 
-export type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+export type OrderStatus = 'pending' | 'approved' | 'rejected' | 'completed';
 
 export interface Order {
   id: string;
   customerName?: string;
-  sellerType: 'store' | 'manufacturer';
-  sellerId: string;
-  sellerName: string;
+  sellerType?: 'store' | 'manufacturer';
+  sellerId?: string;
+  sellerName?: string;
   items: OrderLineSnapshot[];
   totalItems: number;
   totalDiscount: number;
@@ -116,6 +117,11 @@ export interface Order {
   status: OrderStatus;
   createdAt: string;
   deliveredAt?: string;
+  pharmacistId?: string;
+  rejectionReason?: string;
+  approvedAt?: string;
+  rejectedAt?: string;
+  stockDeducted?: boolean;
 }
 
 export interface Pharmacy {

@@ -40,7 +40,7 @@ export default function StoreDetailLayout({
   );
 
   const deliveredOrders = useMemo(
-    () => orders.filter((order) => order.sellerType === 'store' && order.sellerId === storeId && order.status === 'delivered'),
+    () => orders.filter((order) => order.sellerType === 'store' && order.sellerId === storeId && order.status === 'completed'),
     [orders, storeId],
   );
 

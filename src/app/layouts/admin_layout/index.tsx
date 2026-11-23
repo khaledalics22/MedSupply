@@ -26,7 +26,7 @@ function SummaryCard({ label, count, icon, color, backgroundColor }: SummaryCard
   );
 }
 
-export default function AdminLayout({ onStoreManagement, onAddStore, onManufacturerManagement, onAddManufacturer }: { onStoreManagement: () => void; onAddStore: () => void; onManufacturerManagement: () => void; onAddManufacturer: () => void }) {
+export default function AdminLayout({ onStoreManagement, onAddStore, onManufacturerManagement, onAddManufacturer, onManageOrders }: { onStoreManagement: () => void; onAddStore: () => void; onManufacturerManagement: () => void; onAddManufacturer: () => void; onManageOrders: () => void }) {
   const { user, logout } = useAuthState();
   const { orders } = useAppState();
   const database = iocContainer.getDatabase();
@@ -85,12 +85,12 @@ export default function AdminLayout({ onStoreManagement, onAddStore, onManufactu
               <TouchableOpacity
                 key={action.label}
                 style={styles.actionCard}
-                disabled={action.label !== 'Add Store' && action.label !== 'Add Manufacturer'}
+                disabled={action.label !== 'Add Store' && action.label !== 'Add Manufacturer' && action.label !== 'Manage Orders'}
                 activeOpacity={0.8}
-                onPress={action.label === 'Add Store' ? onAddStore : action.label === 'Add Manufacturer' ? onAddManufacturer : undefined}>
+                onPress={action.label === 'Add Store' ? onAddStore : action.label === 'Add Manufacturer' ? onAddManufacturer : action.label === 'Manage Orders' ? onManageOrders : undefined}>
                 <View style={styles.actionIcon}><Ionicons name={action.icon} size={22} color="#208AEF" /></View>
                 <Text style={styles.actionText}>{action.label}</Text>
-                <Text style={styles.actionStatus}>{action.label === 'Add Store' || action.label === 'Add Manufacturer' ? 'Open management' : 'Coming soon'}</Text>
+                <Text style={styles.actionStatus}>{action.label === 'Add Store' || action.label === 'Add Manufacturer' || action.label === 'Manage Orders' ? 'Open management' : 'Coming soon'}</Text>
               </TouchableOpacity>
             ))}
           </View>

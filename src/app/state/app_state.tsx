@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { LanguageCode } from '../i18n';
 import { iocContainer } from '../models/ioc_container';
@@ -23,6 +23,8 @@ type AppStateContextValue = {
   createOrder: () => boolean;
   favoriteStores: string[];
   toggleFavoriteStore: (storeId: string) => void;
+  approveOrder: (orderId: string) => { success: boolean; errors: string[] };
+  rejectOrder: (orderId: string, reason: string) => boolean;
 };
 
 const AppStateContext = createContext<AppStateContextValue | undefined>(undefined);
@@ -40,6 +42,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<NotificationItem[]>(initialNotifications);
   const [favoriteStores, setFavoriteStores] = useState<string[]>(['store-1']);
   const [orders, setOrders] = useState<Order[]>([]);
+  const approvedOrderIds = useRef(new Set<string>());
 
   const addToCart = (productId: string, quantity = 1) => {
     const database = iocContainer.getDatabase();
@@ -90,51 +93,36 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         if (product.sellerType === 'manufacturer' && database.getFactoryById(product.sellerId)?.status !== 'active') return false;
       }
 
-      for (const item of cart) database.deductProductStock(item.productId, item.quantity);
+      const lines: OrderLineSnapshot[] = cart.map((item) => ({
+        productId: item.productId,
+        productName: item.productName,
+        dosage: item.dosage,
+        packageSize: item.packageSize,
+        variant: item.variant,
+        sellerId: item.sellerId,
+        sellerName: item.sellerName,
+        sellerType: item.sellerType,
+        unitPrice: item.unitPrice,
+        discountPercentage: item.discountPercentage,
+        quantity: item.quantity,
+        lineTotal: item.unitPrice * item.quantity,
+        consumerPrice: item.consumerPrice,
+        pharmacyPriceAfterDiscount: item.pharmacyPriceAtPurchase,
+      }));
 
-      const grouped = new Map<string, Order>();
+      const order: Order = {
+        id: `ORD-${Date.now()}`,
+        customerName: user?.fullName,
+        pharmacistId: user?.id,
+        items: lines,
+        totalItems: lines.reduce((sum, line) => sum + line.quantity, 0),
+        totalDiscount: 0,
+        totalPrice: lines.reduce((sum, line) => sum + line.lineTotal, 0),
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+      };
 
-      for (const item of cart) {
-        const key = `${item.sellerType}-${item.sellerId}`;
-        const existing = grouped.get(key);
-        const line: OrderLineSnapshot = {
-          productId: item.productId,
-          productName: item.productName,
-          dosage: item.dosage,
-          packageSize: item.packageSize,
-          variant: item.variant,
-          sellerId: item.sellerId,
-          sellerName: item.sellerName,
-          unitPrice: item.unitPrice,
-          discountPercentage: item.discountPercentage,
-          quantity: item.quantity,
-          lineTotal: item.unitPrice * item.quantity,
-          consumerPrice: item.consumerPrice,
-          pharmacyPriceAfterDiscount: item.pharmacyPriceAtPurchase,
-        };
-
-        if (existing) {
-          existing.items.push(line);
-          existing.totalItems += item.quantity;
-          existing.totalPrice += line.lineTotal;
-        } else {
-          grouped.set(key, {
-            id: `ORD-${Date.now()}-${key}`,
-            customerName: user?.fullName,
-            sellerType: item.sellerType,
-            sellerId: item.sellerId,
-            sellerName: item.sellerName,
-            items: [line],
-            totalItems: item.quantity,
-            totalDiscount: 0,
-            totalPrice: line.lineTotal,
-            status: 'pending',
-            createdAt: new Date().toISOString(),
-          });
-        }
-      }
-
-      setOrders((previous) => [...Array.from(grouped.values()), ...previous]);
+      setOrders((previous) => [order, ...previous]);
       setCart([]);
       return true;
     } catch {
@@ -150,6 +138,43 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setFavoriteStores((previous) => previous.includes(storeId) ? previous.filter((id) => id !== storeId) : [...previous, storeId]);
   };
 
+  const approveOrder = (orderId: string): { success: boolean; errors: string[] } => {
+    const order = orders.find((item) => item.id === orderId);
+    if (!order) return { success: false, errors: ['Order not found.'] };
+    if (approvedOrderIds.current.has(orderId) || order.status !== 'pending') {
+      return { success: false, errors: ['This order has already been approved.'] };
+    }
+
+    const database = iocContainer.getDatabase();
+    const errors: string[] = [];
+    for (const line of order.items) {
+      const product = database.getProductById(line.productId);
+      if (!product || !product.isAvailable) {
+        errors.push(`${line.sellerName} — ${line.productName}${line.dosage ? ` (${line.dosage})` : ''}: product unavailable`);
+      } else if (product.stockQuantity < line.quantity) {
+        errors.push(`${line.sellerName} — ${line.productName}${line.dosage ? ` (${line.dosage})` : ''}: requested ${line.quantity}, available ${product.stockQuantity}`);
+      }
+      if (line.sellerType === 'store' && database.getStoreById(line.sellerId)?.status !== 'active') errors.push(`${line.sellerName} — store is inactive`);
+      if (line.sellerType === 'manufacturer' && database.getFactoryById(line.sellerId)?.status !== 'active') errors.push(`${line.sellerName} — manufacturer is inactive`);
+    }
+
+    if (errors.length > 0) return { success: false, errors };
+
+    for (const line of order.items) database.deductProductStock(line.productId, line.quantity);
+    approvedOrderIds.current.add(orderId);
+    setOrders((previous) => previous.map((item) => item.id === orderId ? { ...item, status: 'approved', approvedAt: new Date().toISOString(), stockDeducted: true } : item));
+    return { success: true, errors: [] };
+  };
+
+  const rejectOrder = (orderId: string, reason: string): boolean => {
+    const reasonText = reason.trim();
+    if (!reasonText) return false;
+    const order = orders.find((item) => item.id === orderId);
+    if (!order || order.status !== 'pending') return false;
+    setOrders((previous) => previous.map((item) => item.id === orderId ? { ...item, status: 'rejected', rejectionReason: reasonText, rejectedAt: new Date().toISOString() } : item));
+    return true;
+  };
+
   const cartCount = useMemo(() => cart.reduce((sum, item) => sum + item.quantity, 0), [cart]);
   const cartTotal = useMemo(() => cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0), [cart]);
   const unreadNotifications = useMemo(() => notifications.filter((notification) => !notification.read).length, [notifications]);
@@ -157,7 +182,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AppStateContextValue>(() => ({
     language, setLanguage, cart, addToCart, updateQuantity, removeFromCart,
     cartTotal, cartCount, notifications, unreadNotifications, markNotificationRead,
-    orders, createOrder, favoriteStores, toggleFavoriteStore,
+    orders, createOrder, approveOrder, rejectOrder, favoriteStores, toggleFavoriteStore,
   }), [language, cart, cartCount, cartTotal, notifications, unreadNotifications, orders, favoriteStores]);
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;
