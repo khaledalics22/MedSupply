@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { FlatList, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import AdvertisementCarousel from "../../components/advertisement_carousel";
 import AppHeader from "../../components/app_header";
@@ -112,7 +111,7 @@ export default function Home({
 
   return (
     <View style={styles.container}>
-      <SafeAreaView edges={["top"]} style={styles.header}>
+      <View style={styles.header}>
         <AppHeader
           title="MedSupply"
           language={language}
@@ -129,7 +128,7 @@ export default function Home({
           placeholderTextColor="rgba(255,255,255,0.8)"
           onPress={onSearchPress}
         />
-      </SafeAreaView>
+      </View>
 
       {query.trim() === "" && (
         <AdvertisementCarousel advertisements={advertisements} />

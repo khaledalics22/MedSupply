@@ -14,6 +14,9 @@ docker run -it \
 #start docker 
 docker start -ai MedSupply
 
+#stop docker image 
+docker stop MedSupply
+
 #attach to running docker 
 docker exec -it MedSupply bash
 

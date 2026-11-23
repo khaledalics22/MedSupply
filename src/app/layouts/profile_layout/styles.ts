@@ -53,4 +53,19 @@ export default StyleSheet.create({
   empty: {
     color: '#69798A',
   },
+  logoutButton: {
+    marginHorizontal: 16,
+    marginTop: 18,
+    height: 50,
+    borderRadius: 12,
+    backgroundColor: '#FFF1F2',
+    borderWidth: 1,
+    borderColor: '#FECDD3',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoutText: {
+    color: '#BE123C',
+    fontWeight: '800',
+  },
 });

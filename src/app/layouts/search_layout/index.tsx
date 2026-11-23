@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { FlatList, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AppHeader from '../../components/app_header';
 import ProductCard from '../../components/product_card';
@@ -69,7 +68,7 @@ export default function Search({ language, categoryType, notificationsCount = 0,
   };
 
   return (
-    <SafeAreaView edges={['top']} style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.header}>
         <SearchBar value={query} onChangeText={setQuery} placeholder={t('searchProducts', language)} placeholderTextColor="rgba(255,255,255,0.8)" showFilterButton onFilterPress={() => setShowFilterMenu((value) => !value)} />
       </View>
@@ -142,6 +141,6 @@ export default function Search({ language, categoryType, notificationsCount = 0,
           );
         }}
       />
-    </SafeAreaView>
+    </View>
   );
 }

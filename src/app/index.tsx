@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react';
-import { Animated, View } from 'react-native';
+import { View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import NavBar, { Tab } from './components/nav_bar';
 import CartLayout from './layouts/cart_layout';
@@ -20,8 +22,12 @@ import ManufacturersLayout from './layouts/manufacturers_layout';
 import StoresLayout from './layouts/stores_layout';
 import BeautyProductsLayout from './layouts/beauty_products_layout';
 import { AppStateProvider, useAppState } from './state/app_state';
-import { CategoryType, Item, ItemType } from './utils/types';
+import { AuthStateProvider, useAuthState } from './state/auth_state';
 import styles from './styles/index.styles';
+import AuthLayout from './layouts/auth_layout';
+import AdminLayout from './layouts/admin_layout';
+
+import { CategoryType, Item, ItemType } from './utils/types';
 
 function AppContent() {
   const [tab, setTab] = useState<Tab>('home');
@@ -126,14 +132,39 @@ function AppContent() {
   const showTabBar = !showCart && !showNotifications && !showCheckout && !selectedProductId && !selectedItem && !selectedSpecialtyId && !selectedCategory;
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView edges={['top', 'bottom']} style={styles.container}>
+      <StatusBar style="light" />
       <View style={styles.content}>{renderContent()}</View>
       {showTabBar && <NavBar active={tab} language={language} onChange={(nextTab) => setTab(nextTab)} />}
-    </View>
+    </SafeAreaView>
   );
 }
 
 export default function HomeScreen() {
+  return (
+    <AuthStateProvider>
+      <RoleBasedApp />
+    </AuthStateProvider>
+  );
+}
+
+function RoleBasedApp() {
+  const { user, isRestoring } = useAuthState();
+
+  if (isRestoring) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F4F8FF' }}>
+          <View />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!user) return <AuthLayout />;
+  if (user.role === 'admin') return <AdminLayout />;
+
   return <AppStateProvider><AppContent /></AppStateProvider>;
 }
 
