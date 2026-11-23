@@ -6,7 +6,7 @@ import { type LanguageCode } from '../../i18n';
 import styles from './styles';
 
 export default function ManufacturersLayout({ language, onBack, onManufacturerSelected }: { language: LanguageCode; onBack: () => void; onManufacturerSelected: (manufacturerId: string) => void }) {
-  const manufacturers = iocContainer.getDatabase().getFactories();
+  const manufacturers = iocContainer.getDatabase().getActiveFactories();
 
   return (
     <View style={styles.container}>

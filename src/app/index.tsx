@@ -29,6 +29,9 @@ import AdminLayout from './layouts/admin_layout';
 import StoreManagementLayout from './layouts/store_management_layout';
 import StoreFormLayout from './layouts/store_form_layout';
 import AdminStoreDetailLayout from './layouts/admin_store_detail_layout';
+import ManufacturerManagementLayout from './layouts/manufacturer_management_layout';
+import ManufacturerFormLayout from './layouts/manufacturer_form_layout';
+import AdminManufacturerDetailLayout from './layouts/admin_manufacturer_detail_layout';
 import { iocContainer } from './models/ioc_container';
 
 import { CategoryType, Item, ItemType } from './utils/types';
@@ -175,45 +178,44 @@ function RoleBasedApp() {
 }
 
 function AdminApp() {
-  const [screen, setScreen] = useState<'dashboard' | 'list' | 'form' | 'detail'>('dashboard');
+  const [screen, setScreen] = useState<'dashboard' | 'store-list' | 'store-form' | 'store-detail' | 'manufacturer-list' | 'manufacturer-form' | 'manufacturer-detail'>('dashboard');
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
   const [editingStoreId, setEditingStoreId] = useState<string | undefined>(undefined);
+  const [selectedFactoryId, setSelectedFactoryId] = useState<string | null>(null);
+  const [editingFactoryId, setEditingFactoryId] = useState<string | undefined>(undefined);
   const [storeFeedback, setStoreFeedback] = useState('');
+  const [manufacturerFeedback, setManufacturerFeedback] = useState('');
 
-  const openForm = (storeId?: string) => {
-    setEditingStoreId(storeId);
-    setScreen('form');
-  };
+  const openStoreForm = (storeId?: string) => { setEditingStoreId(storeId); setScreen('store-form'); };
+  const openManufacturerForm = (factoryId?: string) => { setEditingFactoryId(factoryId); setScreen('manufacturer-form'); };
 
-  if (screen === 'list') {
-    return <StoreManagementLayout
-      onBack={() => setScreen('dashboard')}
-      onAddStore={() => openForm()}
-      onStoreSelected={(storeId) => { setSelectedStoreId(storeId); setScreen('detail'); }}
-      feedback={storeFeedback}
-    />;
+  if (screen === 'store-list') {
+    return <StoreManagementLayout onBack={() => setScreen('dashboard')} onAddStore={() => openStoreForm()} onStoreSelected={(storeId) => { setSelectedStoreId(storeId); setScreen('store-detail'); }} feedback={storeFeedback} />;
   }
-
-  if (screen === 'detail' && selectedStoreId) {
-    return <AdminStoreDetailLayout
-      storeId={selectedStoreId}
-      onBack={() => setScreen('list')}
-      onEdit={(storeId) => openForm(storeId)}
-    />;
+  if (screen === 'store-detail' && selectedStoreId) {
+    return <AdminStoreDetailLayout storeId={selectedStoreId} onBack={() => setScreen('store-list')} onEdit={(storeId) => openStoreForm(storeId)} />;
   }
-
-  if (screen === 'form') {
+  if (screen === 'store-form') {
     const store = editingStoreId ? iocContainer.getDatabase().getStoreById(editingStoreId) : undefined;
-    return <StoreFormLayout
-      store={store}
-      onBack={() => setScreen(editingStoreId ? 'detail' : 'list')}
-      onSaved={(message) => { setStoreFeedback(message); setScreen('list'); }}
-    />;
+    return <StoreFormLayout store={store} onBack={() => setScreen(editingStoreId ? 'store-detail' : 'store-list')} onSaved={(message) => { setStoreFeedback(message); setEditingStoreId(undefined); setScreen('store-list'); }} />;
+  }
+
+  if (screen === 'manufacturer-list') {
+    return <ManufacturerManagementLayout onBack={() => setScreen('dashboard')} onAdd={() => openManufacturerForm()} onSelected={(factoryId) => { setSelectedFactoryId(factoryId); setScreen('manufacturer-detail'); }} feedback={manufacturerFeedback} />;
+  }
+  if (screen === 'manufacturer-detail' && selectedFactoryId) {
+    return <AdminManufacturerDetailLayout factoryId={selectedFactoryId} onBack={() => setScreen('manufacturer-list')} onEdit={(factoryId) => openManufacturerForm(factoryId)} />;
+  }
+  if (screen === 'manufacturer-form') {
+    const factory = editingFactoryId ? iocContainer.getDatabase().getFactoryById(editingFactoryId) : undefined;
+    return <ManufacturerFormLayout factory={factory} onBack={() => setScreen(editingFactoryId ? 'manufacturer-detail' : 'manufacturer-list')} onSaved={(message) => { setManufacturerFeedback(message); setEditingFactoryId(undefined); setScreen('manufacturer-list'); }} />;
   }
 
   return <AdminLayout
-    onStoreManagement={() => setScreen('list')}
-    onAddStore={() => openForm()}
+    onStoreManagement={() => setScreen('store-list')}
+    onAddStore={() => openStoreForm()}
+    onManufacturerManagement={() => setScreen('manufacturer-list')}
+    onAddManufacturer={() => openManufacturerForm()}
   />;
 }
 

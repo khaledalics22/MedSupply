@@ -54,10 +54,14 @@ export interface Store extends Producer {
   status: StoreStatus;
 }
 
+export type ManufacturerStatus = 'active' | 'inactive';
+
 export interface Factory extends Producer {
   type: ProducerType.Manufacturer;
   certification: string;
   productionCapacity: string;
+  contactPerson: string;
+  status: ManufacturerStatus;
 }
 
 export interface CartItem {
@@ -138,4 +142,14 @@ export interface StoreInput {
   description?: string;
   image?: string;
   status: StoreStatus;
+}
+
+export interface ManufacturerInput {
+  name: string;
+  contactPerson: string;
+  phone: string;
+  address: string;
+  description?: string;
+  image?: string;
+  status: ManufacturerStatus;
 }

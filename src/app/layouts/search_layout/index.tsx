@@ -38,7 +38,7 @@ export default function Search({ language, categoryType, notificationsCount = 0,
       ? database.getActiveStores().map((store) => ({ id: store.id, title: store.name, description: store.description, type: 'store' as const, raw: store }))
       : [];
     const factoryItems = selectedTypes.factory
-      ? database.getFactories().map((factory) => ({ id: factory.id, title: factory.name, description: factory.description, type: 'factory' as const, raw: factory }))
+      ? database.getActiveFactories().map((factory) => ({ id: factory.id, title: factory.name, description: factory.description, type: 'factory' as const, raw: factory }))
       : [];
 
     const filtered = [...productItems, ...storeItems, ...factoryItems].filter((item) =>

@@ -8,6 +8,7 @@ import {
   type Specialty,
   type Store,
   type StoreInput,
+  type ManufacturerInput,
 } from './data_types';
 
 export abstract class Database {
@@ -25,6 +26,10 @@ export abstract class Database {
   abstract updateStore(storeId: string, input: StoreInput): Store;
   abstract setStoreStatus(storeId: string, status: 'active' | 'inactive'): Store;
   abstract getFactories(): Factory[];
+  abstract getActiveFactories(): Factory[];
+  abstract addFactory(input: ManufacturerInput): Factory;
+  abstract updateFactory(factoryId: string, input: ManufacturerInput): Factory;
+  abstract setFactoryStatus(factoryId: string, status: 'active' | 'inactive'): Factory;
   abstract getPharmacies(): Pharmacy[];
   abstract getProductById(productId: string): Product | undefined;
   abstract getStoreById(storeId: string): Store | undefined;
@@ -55,10 +60,10 @@ export class MockDatabase extends Database {
     { id: 'store-4', type: ProducerType.Store, name: 'الدواء', description: 'منتجات عشبية وطبيعية ومستلزمات منزلية', image: 'https://picsum.photos/seed/store-dawa/100', address: '23 شارع المسيد، الرياض', phone: '+966 55 345 6789', contactPerson: 'Store Manager', status: 'active', openHours: '9:00 ص - 10:00 م', rating: 4.5 },
   ];
 
-  private readonly factories: Factory[] = [
-    { id: 'factory-1', type: ProducerType.Manufacturer, name: 'فارما إيجيبت', description: 'إنتاج الأدوية الصيدلية والمعلبات', image: 'https://picsum.photos/seed/factory-farma-egypt/100', location: 'المنطقة الصناعية، العاشر', certification: 'GMP', productionCapacity: '3 مليون عبوة شهرياً', phone: '+20 55 888 1234' },
-    { id: 'factory-2', type: ProducerType.Manufacturer, name: 'نوفا هيلث', description: 'إنتاج المكملات والمنتجات الصحية', image: 'https://picsum.photos/seed/factory-nova-health/100', location: 'مدينة التقنية، الرياض', certification: 'ISO 13485', productionCapacity: '500 ألف وحدة شهرياً', phone: '+966 11 777 0909' },
-    { id: 'factory-3', type: ProducerType.Manufacturer, name: 'هيلث لابز', description: 'أجهزة قياس ومستلزمات طبية', image: 'https://picsum.photos/seed/factory-health-labs/100', location: 'المنطقة الصناعية، القاهرة', certification: 'ISO 9001', productionCapacity: '1 مليون وحدة شهرياً', phone: '+20 11 666 1122' },
+  private factories: Factory[] = [
+    { id: 'factory-1', type: ProducerType.Manufacturer, name: 'فارما إيجيبت', description: 'إنتاج الأدوية الصيدلية والمعلبات', image: 'https://picsum.photos/seed/factory-farma-egypt/100', location: 'المنطقة الصناعية، العاشر', address: 'المنطقة الصناعية، العاشر', certification: 'GMP', productionCapacity: '3 مليون عبوة شهرياً', phone: '+20 55 888 1234', contactPerson: 'Manufacturing Manager', status: 'active' },
+    { id: 'factory-2', type: ProducerType.Manufacturer, name: 'نوفا هيلث', description: 'إنتاج المكملات والمنتجات الصحية', image: 'https://picsum.photos/seed/factory-nova-health/100', location: 'مدينة التقنية، الرياض', address: 'مدينة التقنية، الرياض', certification: 'ISO 13485', productionCapacity: '500 ألف وحدة شهرياً', phone: '+966 11 777 0909', contactPerson: 'Manufacturing Manager', status: 'active' },
+    { id: 'factory-3', type: ProducerType.Manufacturer, name: 'هيلث لابز', description: 'أجهزة قياس ومستلزمات طبية', image: 'https://picsum.photos/seed/factory-health-labs/100', location: 'المنطقة الصناعية، القاهرة', address: 'المنطقة الصناعية، القاهرة', certification: 'ISO 9001', productionCapacity: '1 مليون وحدة شهرياً', phone: '+20 11 666 1122', contactPerson: 'Manufacturing Manager', status: 'active' },
   ];
 
   private readonly products: Product[] = [
@@ -119,6 +124,10 @@ export class MockDatabase extends Database {
         const store = this.getStoreById(product.sellerId);
         if (!store || store.status !== 'active') return false;
       }
+      if (product.sellerType === ProducerType.Manufacturer) {
+        const manufacturer = this.getFactoryById(product.sellerId);
+        if (!manufacturer || manufacturer.status !== 'active') return false;
+      }
       return true;
     });
   }
@@ -168,6 +177,49 @@ export class MockDatabase extends Database {
     return updated;
   }
   getFactories(): Factory[] { return [...this.factories]; }
+  getActiveFactories(): Factory[] { return this.factories.filter((factory) => factory.status === 'active').map((factory) => ({ ...factory })); }
+  addFactory(input: ManufacturerInput): Factory {
+    const factory: Factory = {
+      id: `factory-${Date.now()}`,
+      type: ProducerType.Manufacturer,
+      name: input.name.trim(),
+      description: input.description?.trim() || 'No description available',
+      image: input.image?.trim() || `https://picsum.photos/seed/factory-${Date.now()}/100`,
+      location: input.address.trim(),
+      address: input.address.trim(),
+      phone: input.phone.trim(),
+      contactPerson: input.contactPerson.trim(),
+      status: input.status,
+      certification: 'Pending',
+      productionCapacity: 'Not specified',
+    };
+    this.factories = [...this.factories, factory];
+    return { ...factory };
+  }
+  updateFactory(factoryId: string, input: ManufacturerInput): Factory {
+    const index = this.factories.findIndex((factory) => factory.id === factoryId);
+    if (index < 0) throw new Error('Manufacturer not found');
+    const updated: Factory = {
+      ...this.factories[index],
+      name: input.name.trim(),
+      contactPerson: input.contactPerson.trim(),
+      phone: input.phone.trim(),
+      address: input.address.trim(),
+      location: input.address.trim(),
+      description: input.description?.trim() || 'No description available',
+      image: input.image?.trim() || this.factories[index].image,
+      status: input.status,
+    };
+    this.factories = this.factories.map((factory) => factory.id === factoryId ? updated : factory);
+    return { ...updated };
+  }
+  setFactoryStatus(factoryId: string, status: 'active' | 'inactive'): Factory {
+    const index = this.factories.findIndex((factory) => factory.id === factoryId);
+    if (index < 0) throw new Error('Manufacturer not found');
+    const updated = { ...this.factories[index], status };
+    this.factories = this.factories.map((factory) => factory.id === factoryId ? updated : factory);
+    return updated;
+  }
   getPharmacies(): Pharmacy[] { return [...this.pharmacies]; }
   getProductById(productId: string): Product | undefined { return this.products.find((product) => product.id === productId); }
   getStoreById(storeId: string): Store | undefined { return this.stores.find((store) => store.id === storeId); }

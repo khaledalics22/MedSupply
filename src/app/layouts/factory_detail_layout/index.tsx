@@ -32,7 +32,7 @@ export default function FactoryDetailLayout({
       .filter((product) => matchesAnySearch([product.name, product.description, product.dosage, product.packageSize], productQuery));
   }, [database, factoryId, productQuery]);
 
-  if (!factory) {
+  if (!factory || factory.status !== 'active') {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
