@@ -32,7 +32,7 @@ export default function Search({ language, categoryType, notificationsCount = 0,
 
   const items = useMemo(() => {
     const productItems = selectedTypes.product
-      ? database.getProducts().map((product) => ({ id: product.id, title: product.name, description: product.description ?? '', type: 'product' as const, raw: product }))
+      ? database.getAvailableProducts().map((product) => ({ id: product.id, title: product.name, description: product.description ?? '', type: 'product' as const, raw: product }))
       : [];
     const storeItems = selectedTypes.store
       ? database.getActiveStores().map((store) => ({ id: store.id, title: store.name, description: store.description, type: 'store' as const, raw: store }))

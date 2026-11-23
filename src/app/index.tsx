@@ -33,6 +33,8 @@ import ManufacturerManagementLayout from './layouts/manufacturer_management_layo
 import ManufacturerFormLayout from './layouts/manufacturer_form_layout';
 import AdminManufacturerDetailLayout from './layouts/admin_manufacturer_detail_layout';
 import { iocContainer } from './models/ioc_container';
+import ProductFormLayout from './layouts/product_form_layout';
+import { ProducerType, type Product } from './models/data_types';
 
 import { CategoryType, Item, ItemType } from './utils/types';
 
@@ -178,13 +180,16 @@ function RoleBasedApp() {
 }
 
 function AdminApp() {
-  const [screen, setScreen] = useState<'dashboard' | 'store-list' | 'store-form' | 'store-detail' | 'manufacturer-list' | 'manufacturer-form' | 'manufacturer-detail'>('dashboard');
+  const [screen, setScreen] = useState<'dashboard' | 'store-list' | 'store-form' | 'store-detail' | 'manufacturer-list' | 'manufacturer-form' | 'manufacturer-detail' | 'provider-product-form'>('dashboard');
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
   const [editingStoreId, setEditingStoreId] = useState<string | undefined>(undefined);
   const [selectedFactoryId, setSelectedFactoryId] = useState<string | null>(null);
   const [editingFactoryId, setEditingFactoryId] = useState<string | undefined>(undefined);
   const [storeFeedback, setStoreFeedback] = useState('');
   const [manufacturerFeedback, setManufacturerFeedback] = useState('');
+  const [providerProduct, setProviderProduct] = useState<Product | undefined>(undefined);
+  const [providerType, setProviderType] = useState<'store' | 'manufacturer'>('store');
+  const [providerId, setProviderId] = useState<string | null>(null);
 
   const openStoreForm = (storeId?: string) => { setEditingStoreId(storeId); setScreen('store-form'); };
   const openManufacturerForm = (factoryId?: string) => { setEditingFactoryId(factoryId); setScreen('manufacturer-form'); };
@@ -193,7 +198,13 @@ function AdminApp() {
     return <StoreManagementLayout onBack={() => setScreen('dashboard')} onAddStore={() => openStoreForm()} onStoreSelected={(storeId) => { setSelectedStoreId(storeId); setScreen('store-detail'); }} feedback={storeFeedback} />;
   }
   if (screen === 'store-detail' && selectedStoreId) {
-    return <AdminStoreDetailLayout storeId={selectedStoreId} onBack={() => setScreen('store-list')} onEdit={(storeId) => openStoreForm(storeId)} />;
+    return <AdminStoreDetailLayout
+      storeId={selectedStoreId}
+      onBack={() => setScreen('store-list')}
+      onEdit={(storeId) => openStoreForm(storeId)}
+      onAddProduct={() => { setProviderType('store'); setProviderId(selectedStoreId); setProviderProduct(undefined); setScreen('provider-product-form'); }}
+      onEditProduct={(product) => { setProviderType('store'); setProviderId(selectedStoreId); setProviderProduct(product); setScreen('provider-product-form'); }}
+    />;
   }
   if (screen === 'store-form') {
     const store = editingStoreId ? iocContainer.getDatabase().getStoreById(editingStoreId) : undefined;
@@ -204,11 +215,27 @@ function AdminApp() {
     return <ManufacturerManagementLayout onBack={() => setScreen('dashboard')} onAdd={() => openManufacturerForm()} onSelected={(factoryId) => { setSelectedFactoryId(factoryId); setScreen('manufacturer-detail'); }} feedback={manufacturerFeedback} />;
   }
   if (screen === 'manufacturer-detail' && selectedFactoryId) {
-    return <AdminManufacturerDetailLayout factoryId={selectedFactoryId} onBack={() => setScreen('manufacturer-list')} onEdit={(factoryId) => openManufacturerForm(factoryId)} />;
+    return <AdminManufacturerDetailLayout
+      factoryId={selectedFactoryId}
+      onBack={() => setScreen('manufacturer-list')}
+      onEdit={(factoryId) => openManufacturerForm(factoryId)}
+      onAddProduct={() => { setProviderType('manufacturer'); setProviderId(selectedFactoryId); setProviderProduct(undefined); setScreen('provider-product-form'); }}
+      onEditProduct={(product) => { setProviderType('manufacturer'); setProviderId(selectedFactoryId); setProviderProduct(product); setScreen('provider-product-form'); }}
+    />;
   }
   if (screen === 'manufacturer-form') {
     const factory = editingFactoryId ? iocContainer.getDatabase().getFactoryById(editingFactoryId) : undefined;
     return <ManufacturerFormLayout factory={factory} onBack={() => setScreen(editingFactoryId ? 'manufacturer-detail' : 'manufacturer-list')} onSaved={(message) => { setManufacturerFeedback(message); setEditingFactoryId(undefined); setScreen('manufacturer-list'); }} />;
+  }
+
+  if (screen === 'provider-product-form' && providerId) {
+    return <ProductFormLayout
+      providerType={providerType === 'store' ? ProducerType.Store : ProducerType.Manufacturer}
+      providerId={providerId}
+      product={providerProduct}
+      onBack={() => setScreen(providerType === 'store' ? 'store-detail' : 'manufacturer-detail')}
+      onSaved={() => setScreen(providerType === 'store' ? 'store-detail' : 'manufacturer-detail')}
+    />;
   }
 
   return <AdminLayout

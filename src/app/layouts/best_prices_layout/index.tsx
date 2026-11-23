@@ -13,7 +13,7 @@ export default function BestPricesLayout({ language, onBack, onProductSelected }
   const database = iocContainer.getDatabase();
   const { cart, addToCart, updateQuantity } = useAppState();
   const [query, setQuery] = useState('');
-  const [sortMode, setSortMode] = useState<'priceAsc' | 'discount'>('priceAsc');
+  const [sortMode, setSortMode] = useState<'priceAsc' | 'priceDesc' | 'discount'>('priceAsc');
 
   const cards = useMemo(() => {
     return database.getAvailableProducts()
@@ -35,9 +35,11 @@ export default function BestPricesLayout({ language, onBack, onProductSelected }
     const normalized = query.trim().toLowerCase();
     return cards
       .filter((card) => !normalized || card.product.name.toLowerCase().includes(normalized) || card.sellerName.toLowerCase().includes(normalized))
-      .sort((left, right) => sortMode === 'priceAsc'
-        ? left.product.pharmacyPriceAfterDiscount - right.product.pharmacyPriceAfterDiscount
-        : right.product.discountPercentage - left.product.discountPercentage);
+      .sort((left, right) => {
+        if (sortMode === 'priceDesc') return right.product.pharmacyPriceAfterDiscount - left.product.pharmacyPriceAfterDiscount;
+        if (sortMode === 'discount') return right.product.discountPercentage - left.product.discountPercentage;
+        return left.product.pharmacyPriceAfterDiscount - right.product.pharmacyPriceAfterDiscount;
+      });
   }, [cards, query, sortMode]);
 
   return (
@@ -47,6 +49,9 @@ export default function BestPricesLayout({ language, onBack, onProductSelected }
       <View style={styles.filterRow}>
         <TouchableOpacity activeOpacity={0.8} onPress={() => setSortMode('priceAsc')} style={[styles.filterButton, sortMode === 'priceAsc' && styles.filterButtonActive]}>
           <Text style={[styles.filterButtonText, sortMode === 'priceAsc' && styles.filterButtonTextActive]}>Lowest price</Text>
+        </TouchableOpacity>
+        <TouchableOpacity activeOpacity={0.8} onPress={() => setSortMode('priceDesc')} style={[styles.filterButton, sortMode === 'priceDesc' && styles.filterButtonActive]}>
+          <Text style={[styles.filterButtonText, sortMode === 'priceDesc' && styles.filterButtonTextActive]}>Highest price</Text>
         </TouchableOpacity>
         <TouchableOpacity activeOpacity={0.8} onPress={() => setSortMode('discount')} style={[styles.filterButton, sortMode === 'discount' && styles.filterButtonActive]}>
           <Text style={[styles.filterButtonText, sortMode === 'discount' && styles.filterButtonTextActive]}>Discount</Text>

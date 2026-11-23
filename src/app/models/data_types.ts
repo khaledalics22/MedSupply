@@ -18,6 +18,7 @@ export interface Product {
   pharmacyPriceAfterDiscount: number;
   stockQuantity: number;
   isAvailable: boolean;
+  expiryDate?: string;
 }
 
 export interface Specialty {
@@ -80,6 +81,8 @@ export interface CartItem {
   product?: Product;
   store?: Store;
   manufacturer?: Factory;
+  consumerPrice?: number;
+  pharmacyPriceAtPurchase?: number;
 }
 
 export interface OrderLineSnapshot {
@@ -94,6 +97,8 @@ export interface OrderLineSnapshot {
   discountPercentage: number;
   quantity: number;
   lineTotal: number;
+  consumerPrice?: number;
+  pharmacyPriceAfterDiscount?: number;
 }
 
 export type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
@@ -152,4 +157,19 @@ export interface ManufacturerInput {
   description?: string;
   image?: string;
   status: ManufacturerStatus;
+}
+
+export interface ProductInput {
+  name: string;
+  dosage: string;
+  description?: string;
+  specialtyId: string;
+  consumerPrice: number;
+  discountPercentage: number;
+  stockQuantity: number;
+  image?: string;
+  expiryDate?: string;
+  isAvailable: boolean;
+  packageSize?: string;
+  variant?: string;
 }

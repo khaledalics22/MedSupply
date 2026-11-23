@@ -65,6 +65,10 @@ export default function ProductDetailLayout({
               <Text style={styles.value}>{product.variant}</Text>
             </>
           ) : null}
+          <Text style={styles.label}>Category</Text>
+          <Text style={styles.value}>{database.getSpecialtyById(product.specialtyId)?.name ?? product.specialtyId}</Text>
+          <Text style={styles.label}>Provider</Text>
+          <Text style={styles.value}>{store?.name ?? manufacturerName ?? 'N/A'}</Text>
         </View>
 
         <Text style={styles.sectionTitle}>Seller and purchase</Text>

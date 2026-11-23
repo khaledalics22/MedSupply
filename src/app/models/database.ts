@@ -9,6 +9,7 @@ import {
   type Store,
   type StoreInput,
   type ManufacturerInput,
+  type ProductInput,
 } from './data_types';
 
 export abstract class Database {
@@ -37,6 +38,11 @@ export abstract class Database {
   abstract getBestPriceProducts(): Product[];
   abstract createCartItem(productId: string, quantity?: number): CartItem;
   abstract deductProductStock(productId: string, quantity: number): void;
+  abstract addProviderProduct(providerType: ProducerType, providerId: string, input: ProductInput): Product;
+  abstract updateProviderProduct(productId: string, input: ProductInput): Product;
+  abstract setProviderProductStatus(productId: string, isAvailable: boolean): Product;
+  abstract findSimilarProviderProducts(providerType: ProducerType, providerId: string, name: string): Product[];
+  abstract findProviderProductDuplicate(providerType: ProducerType, providerId: string, name: string, dosage: string, excludeProductId?: string): Product | undefined;
 }
 
 export class MockDatabase extends Database {
@@ -66,7 +72,7 @@ export class MockDatabase extends Database {
     { id: 'factory-3', type: ProducerType.Manufacturer, name: 'هيلث لابز', description: 'أجهزة قياس ومستلزمات طبية', image: 'https://picsum.photos/seed/factory-health-labs/100', location: 'المنطقة الصناعية، القاهرة', address: 'المنطقة الصناعية، القاهرة', certification: 'ISO 9001', productionCapacity: '1 مليون وحدة شهرياً', phone: '+20 11 666 1122', contactPerson: 'Manufacturing Manager', status: 'active' },
   ];
 
-  private readonly products: Product[] = [
+  private products: Product[] = [
     this.makeProduct('store-1-prod-1', 'باراسيتامول', 'مسكن للألم وخافض للحرارة', 'store-1', ProducerType.Store, 'general', 'factory-1', 'فارما إيجيبت', '500 mg', '20 قرصاً', 30, 17, 120, true),
     this.makeProduct('store-1-prod-2', 'أموكسيسيلين', 'مضاد حيوي واسع المجال', 'store-1', ProducerType.Store, 'general', 'factory-1', 'فارما إيجيبت', '250 mg', '12 كبسولة', 140, 14, 42, true),
     this.makeProduct('store-1-prod-3', 'سيروم فيتامين سي', 'سيروم يومي للترطيب والإشراق', 'store-1', ProducerType.Store, 'beauty', 'factory-2', 'نوفا هيلث', '30 ml', 'عبوة واحدة', 95, 10, 25, true),
@@ -122,11 +128,11 @@ export class MockDatabase extends Database {
       if (!product.isAvailable || product.stockQuantity <= 0) return false;
       if (product.sellerType === ProducerType.Store) {
         const store = this.getStoreById(product.sellerId);
-        if (!store || store.status !== 'active') return false;
+        if (!store || store.status !== 'active') throw new Error('This store is inactive');
       }
       if (product.sellerType === ProducerType.Manufacturer) {
         const manufacturer = this.getFactoryById(product.sellerId);
-        if (!manufacturer || manufacturer.status !== 'active') return false;
+        if (!manufacturer || manufacturer.status !== 'active') throw new Error('This manufacturer is inactive');
       }
       return true;
     });
@@ -252,6 +258,8 @@ export class MockDatabase extends Database {
       product,
       store: product.sellerType === ProducerType.Store ? seller as Store : undefined,
       manufacturer: product.sellerType === ProducerType.Manufacturer ? seller as Factory : undefined,
+      consumerPrice: product.consumerPrice,
+      pharmacyPriceAtPurchase: product.pharmacyPriceAfterDiscount,
     };
   }
 
@@ -260,6 +268,91 @@ export class MockDatabase extends Database {
     if (!product || !product.isAvailable || product.stockQuantity < quantity) throw new Error('Product stock validation failed');
     product.stockQuantity -= quantity;
     if (product.stockQuantity === 0) product.isAvailable = false;
+  }
+
+  findProviderProductDuplicate(providerType: ProducerType, providerId: string, name: string, dosage: string, excludeProductId?: string): Product | undefined {
+    const key = normalizeProductKey(name, dosage);
+    return this.products.find((product) =>
+      product.sellerType === providerType &&
+      product.sellerId === providerId &&
+      product.id !== excludeProductId &&
+      normalizeProductKey(product.name, product.dosage) === key
+    );
+  }
+  findSimilarProviderProducts(providerType: ProducerType, providerId: string, name: string): Product[] {
+    const normalized = normalizeProductName(name);
+    if (!normalized) return [];
+    return this.products.filter((product) =>
+      product.sellerType === providerType &&
+      product.sellerId === providerId &&
+      (normalizeProductName(product.name).includes(normalized) || normalized.includes(normalizeProductName(product.name)))
+    ).slice(0, 20);
+  }
+  addProviderProduct(providerType: ProducerType, providerId: string, input: ProductInput): Product {
+    if (!input.name.trim() || !input.dosage.trim()) throw new Error('Product name and dosage are required');
+    if (input.consumerPrice <= 0) throw new Error('Consumer price must be greater than zero');
+    if (input.discountPercentage < 0 || input.discountPercentage > 100) throw new Error('Discount must be between 0% and 100%');
+    if (!Number.isInteger(input.stockQuantity) || input.stockQuantity < 0) throw new Error('Stock quantity must be zero or greater');
+    const duplicate = this.findProviderProductDuplicate(providerType, providerId, input.name, input.dosage);
+    if (duplicate) throw new Error(`Duplicate product: ${duplicate.name} — ${duplicate.dosage ?? 'No dosage'} already exists for this provider`);
+    const provider = providerType === ProducerType.Store ? this.getStoreById(providerId) : this.getFactoryById(providerId);
+    if (!provider) throw new Error('Provider not found');
+    const product: Product = {
+      id: `${providerType}-${providerId}-prod-${Date.now()}`,
+      name: input.name.trim().replace(/\s+/g, ' '),
+      description: input.description?.trim(),
+      image: input.image?.trim() || `https://picsum.photos/seed/${providerType}-${providerId}-${Date.now()}/120`,
+      specialtyId: input.specialtyId,
+      sellerType: providerType,
+      sellerId: providerId,
+      manufacturerId: providerType === ProducerType.Manufacturer ? providerId : undefined,
+      manufacturer: providerType === ProducerType.Manufacturer ? provider.name : undefined,
+      dosage: input.dosage.trim().replace(/\s+/g, ' '),
+      packageSize: input.packageSize,
+      variant: input.variant,
+      form: input.packageSize,
+      consumerPrice: roundCurrency(input.consumerPrice),
+      discountPercentage: roundCurrency(input.discountPercentage),
+      pharmacyPriceAfterDiscount: calculatePharmacistPrice(input.consumerPrice, input.discountPercentage),
+      stockQuantity: input.stockQuantity,
+      isAvailable: input.isAvailable,
+      expiryDate: input.expiryDate?.trim() || undefined,
+    };
+    this.products = [...this.products, product];
+    return { ...product };
+  }
+  updateProviderProduct(productId: string, input: ProductInput): Product {
+    const index = this.products.findIndex((product) => product.id === productId);
+    if (index < 0) throw new Error('Product not found');
+    const existing = this.products[index];
+    if (input.consumerPrice <= 0) throw new Error('Consumer price must be greater than zero');
+    if (input.discountPercentage < 0 || input.discountPercentage > 100) throw new Error('Discount must be between 0% and 100%');
+    if (!Number.isInteger(input.stockQuantity) || input.stockQuantity < 0) throw new Error('Stock quantity must be zero or greater');
+    const duplicate = this.findProviderProductDuplicate(existing.sellerType, existing.sellerId, input.name, input.dosage, productId);
+    if (duplicate) throw new Error(`Duplicate product: ${duplicate.name} — ${duplicate.dosage ?? 'No dosage'} already exists for this provider`);
+    const updated: Product = {
+      ...existing,
+      name: input.name.trim().replace(/\s+/g, ' '),
+      dosage: input.dosage.trim().replace(/\s+/g, ' '),
+      description: input.description?.trim(),
+      specialtyId: input.specialtyId,
+      consumerPrice: roundCurrency(input.consumerPrice),
+      discountPercentage: roundCurrency(input.discountPercentage),
+      pharmacyPriceAfterDiscount: calculatePharmacistPrice(input.consumerPrice, input.discountPercentage),
+      stockQuantity: input.stockQuantity,
+      image: input.image?.trim() || existing.image,
+      isAvailable: input.isAvailable,
+      expiryDate: input.expiryDate?.trim() || undefined,
+    };
+    this.products = this.products.map((product) => product.id === productId ? updated : product);
+    return { ...updated };
+  }
+  setProviderProductStatus(productId: string, isAvailable: boolean): Product {
+    const index = this.products.findIndex((product) => product.id === productId);
+    if (index < 0) throw new Error('Product not found');
+    const updated = { ...this.products[index], isAvailable };
+    this.products = this.products.map((product) => product.id === productId ? updated : product);
+    return updated;
   }
 }
 
@@ -276,9 +369,19 @@ export function normalizeProductName(value: string): string {
 }
 
 export function normalizeProductDosage(value: string): string {
-  return value.trim().replace(/\s+/g, '').toLowerCase();
+  return value.trim().replace(/\s+/g, '').replace(/milligrams?/gi, 'mg').replace(/grams?/gi, 'g').replace(/milliliters?/gi, 'ml').toLowerCase();
 }
 
 export function normalizeProductKey(name: string, dosage?: string): string {
   return `${normalizeProductName(name)}|${normalizeProductDosage(dosage ?? '')}`;
+}
+
+export function roundCurrency(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+export function calculatePharmacistPrice(consumerPrice: number, discountPercentage: number): number {
+  if (!Number.isFinite(consumerPrice) || consumerPrice <= 0) return 0;
+  if (!Number.isFinite(discountPercentage) || discountPercentage < 0 || discountPercentage > 100) return 0;
+  return roundCurrency(consumerPrice * (1 - discountPercentage / 100));
 }

@@ -66,6 +66,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
       const product = iocContainer.getDatabase().getProductById(productId);
       if (!product || !product.isAvailable || quantity > product.stockQuantity) throw new Error('Requested quantity exceeds available stock');
+      if (product.sellerType === 'store' && iocContainer.getDatabase().getStoreById(product.sellerId)?.status !== 'active') throw new Error('This store is currently inactive');
+      if (product.sellerType === 'manufacturer' && iocContainer.getDatabase().getFactoryById(product.sellerId)?.status !== 'active') throw new Error('This manufacturer is currently inactive');
 
       return previous.map((item) => item.productId === productId ? { ...item, quantity } : item);
     });
@@ -84,6 +86,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       for (const item of cart) {
         const product = database.getProductById(item.productId);
         if (!product || !product.isAvailable || product.stockQuantity < item.quantity) return false;
+        if (product.sellerType === 'store' && database.getStoreById(product.sellerId)?.status !== 'active') return false;
+        if (product.sellerType === 'manufacturer' && database.getFactoryById(product.sellerId)?.status !== 'active') return false;
       }
 
       for (const item of cart) database.deductProductStock(item.productId, item.quantity);
@@ -105,6 +109,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           discountPercentage: item.discountPercentage,
           quantity: item.quantity,
           lineTotal: item.unitPrice * item.quantity,
+          consumerPrice: item.consumerPrice,
+          pharmacyPriceAfterDiscount: item.pharmacyPriceAtPurchase,
         };
 
         if (existing) {
