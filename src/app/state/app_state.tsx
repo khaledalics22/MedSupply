@@ -25,6 +25,11 @@ type AppStateContextValue = {
   toggleFavoriteStore: (storeId: string) => void;
   approveOrder: (orderId: string) => { success: boolean; errors: string[] };
   rejectOrder: (orderId: string, reason: string) => boolean;
+  reorderOrder: (orderId: string) => {
+    added: Array<{ productName: string; quantity: number }>;
+    limited: Array<{ productName: string; requested: number; added: number; available: number }>;
+    skipped: Array<{ productName: string; reason: string }>;
+  };
 };
 
 const AppStateContext = createContext<AppStateContextValue | undefined>(undefined);
@@ -175,6 +180,46 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     return true;
   };
 
+  const reorderOrder = (orderId: string): {
+    added: Array<{ productName: string; quantity: number }>;
+    limited: Array<{ productName: string; requested: number; added: number; available: number }>;
+    skipped: Array<{ productName: string; reason: string }>;
+  } => {
+    const order = orders.find((item) => item.id === orderId);
+    const report = { added: [] as Array<{ productName: string; quantity: number }>, limited: [] as Array<{ productName: string; requested: number; added: number; available: number }>, skipped: [] as Array<{ productName: string; reason: string }> };
+    if (!order || order.pharmacistId !== user?.id) {
+      report.skipped.push({ productName: 'Order', reason: 'Order not found or access is not permitted' });
+      return report;
+    }
+
+    const database = iocContainer.getDatabase();
+    let next = cart.map((item) => ({ ...item }));
+
+    for (const line of order.items) {
+      const product = database.getProductById(line.productId);
+      if (!product) { report.skipped.push({ productName: line.productName, reason: 'Product no longer exists' }); continue; }
+      if (!product.isAvailable) { report.skipped.push({ productName: line.productName, reason: 'Product is inactive or out of stock' }); continue; }
+      if (product.sellerType === 'store' && database.getStoreById(product.sellerId)?.status !== 'active') { report.skipped.push({ productName: line.productName, reason: 'Store is inactive' }); continue; }
+      if (product.sellerType === 'manufacturer' && database.getFactoryById(product.sellerId)?.status !== 'active') { report.skipped.push({ productName: line.productName, reason: 'Manufacturer is inactive' }); continue; }
+
+      const existing = next.find((item) => item.productId === product.id);
+      const existingQuantity = existing?.quantity ?? 0;
+      const quantityToAdd = Math.max(0, Math.min(line.quantity, product.stockQuantity - existingQuantity));
+
+      if (quantityToAdd <= 0) { report.limited.push({ productName: line.productName, requested: line.quantity, added: 0, available: product.stockQuantity }); continue; }
+
+      if (existing) next = next.map((item) => item.productId === product.id ? { ...item, quantity: item.quantity + quantityToAdd } : item);
+      else next = [...next, database.createCartItem(product.id, quantityToAdd)];
+
+      if (quantityToAdd < line.quantity) report.limited.push({ productName: line.productName, requested: line.quantity, added: quantityToAdd, available: product.stockQuantity });
+      else report.added.push({ productName: line.productName, quantity: quantityToAdd });
+    }
+
+    setCart(next);
+
+    return report;
+  };
+
   const cartCount = useMemo(() => cart.reduce((sum, item) => sum + item.quantity, 0), [cart]);
   const cartTotal = useMemo(() => cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0), [cart]);
   const unreadNotifications = useMemo(() => notifications.filter((notification) => !notification.read).length, [notifications]);
@@ -182,7 +227,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AppStateContextValue>(() => ({
     language, setLanguage, cart, addToCart, updateQuantity, removeFromCart,
     cartTotal, cartCount, notifications, unreadNotifications, markNotificationRead,
-    orders, createOrder, approveOrder, rejectOrder, favoriteStores, toggleFavoriteStore,
+    orders, createOrder, approveOrder, rejectOrder, favoriteStores, toggleFavoriteStore, reorderOrder,
   }), [language, cart, cartCount, cartTotal, notifications, unreadNotifications, orders, favoriteStores]);
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;

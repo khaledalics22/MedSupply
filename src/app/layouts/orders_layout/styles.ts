@@ -148,4 +148,70 @@ export default StyleSheet.create({
     color: '#9F1239',
     marginTop: 3,
   },
+  timeline: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E5EEF9',
+    padding: 14,
+    marginBottom: 10
+  },
+  timelineStep: {
+    flex: 1,
+    alignItems: 'center',
+    opacity: 0.45
+  },
+  timelineStepActive: {
+    opacity: 1
+  },
+  timelineBullet: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: '#94A3B8',
+    backgroundColor: '#FFFFFF',
+    marginBottom: 6
+  },
+  timelineBulletActive: {
+    borderColor: '#208AEF',
+    backgroundColor: '#208AEF'
+  },
+  timelineLabel: {
+    color: '#64748B',
+    fontSize: 10,
+    textAlign: 'center',
+    lineHeight: 14
+  },
+  timelineLabelActive: {
+    color: '#208AEF',
+    fontWeight: '800'
+  },
+  reorderButton: {
+    height: 52,
+    borderRadius: 12,
+    backgroundColor: '#208AEF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4
+  },
+  reorderText: {
+    color: '#FFFFFF',
+    fontWeight: '900',
+    fontSize: 16
+  },
+  reorderFeedbackBox: {
+    backgroundColor: '#EEF6FF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#BFDFFF',
+    padding: 12,
+    marginBottom: 10
+  },
+  reorderFeedbackText: {
+    color: '#334E68',
+    lineHeight: 18
+  },
 });
