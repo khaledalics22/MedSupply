@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { iocContainer } from '../../models/ioc_container';
+import { getStockStatus } from '../../models/database';
 import type { Product } from '../../models/data_types';
 import styles from './styles';
 
@@ -15,6 +16,7 @@ export default function AdminManufacturerDetailLayout({ factoryId, onBack, onEdi
   const [feedback, setFeedback] = useState('');
   const [productQuery, setProductQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [stockStatusFilter, setStockStatusFilter] = useState<'all' | 'available' | 'low-stock' | 'out-of-stock'>('all');
 
   if (!factory) return <View style={styles.container}><View style={styles.header}><TouchableOpacity style={styles.backButton} onPress={onBack}><Ionicons name="arrow-back" size={20} color="#FFFFFF" /></TouchableOpacity><Text style={styles.title}>Manufacturer not found</Text></View></View>;
 
@@ -44,13 +46,13 @@ export default function AdminManufacturerDetailLayout({ factoryId, onBack, onEdi
         <View style={styles.productsSection}>
           <View style={styles.productsHeader}><Text style={styles.sectionTitle}>Products</Text><TouchableOpacity style={styles.addProductButton} onPress={onAddProduct}><Ionicons name="add" size={18} color="#FFFFFF" /><Text style={styles.addProductText}>Add Product</Text></TouchableOpacity></View>
           <View style={styles.productSearch}><Ionicons name="search" size={18} color="#718096" /><TextInput value={productQuery} onChangeText={setProductQuery} placeholder="Search products by name" style={styles.productSearchInput} /></View>
-          <View style={styles.productFilters}>{(['all', 'active', 'inactive'] as const).map((filter) => <TouchableOpacity key={filter} style={[styles.productFilter, statusFilter === filter && styles.productFilterActive]} onPress={() => setStatusFilter(filter)}><Text style={[styles.productFilterText, statusFilter === filter && styles.productFilterTextActive]}>{filter}</Text></TouchableOpacity>)}</View>
-          {products.filter((product) => (!productQuery.trim() || product.name.toLowerCase().includes(productQuery.trim().toLowerCase())) && (statusFilter === 'all' || (statusFilter === 'active' ? product.isAvailable : !product.isAvailable))).length === 0 ? (
+          <View style={styles.productFilters}>{(['all', 'available', 'low-stock', 'out-of-stock'] as const).map((filter) => <TouchableOpacity key={filter} style={[styles.productFilter, stockStatusFilter === filter && styles.productFilterActive]} onPress={() => setStockStatusFilter(filter)}><Text style={[styles.productFilterText, stockStatusFilter === filter && styles.productFilterTextActive]}>{filter}</Text></TouchableOpacity>)}</View>
+          {products.filter((product) => (!productQuery.trim() || product.name.toLowerCase().includes(productQuery.trim().toLowerCase())) && (statusFilter === 'all' || (statusFilter === 'active' ? product.isAvailable : !product.isAvailable)) && (stockStatusFilter === 'all' || (stockStatusFilter === 'available' ? product.stockQuantity > 5 : stockStatusFilter === 'low-stock' ? product.stockQuantity > 0 && product.stockQuantity <= 5 : product.stockQuantity === 0))).length === 0 ? (
             <View style={styles.emptyProducts}><Ionicons name="cube-outline" size={30} color="#94A3B8" /><Text style={styles.emptyTitle}>No matching products</Text><Text style={styles.emptyText}>Try a different search or status filter.</Text></View>
-          ) : products.filter((product) => (!productQuery.trim() || product.name.toLowerCase().includes(productQuery.trim().toLowerCase())) && (statusFilter === 'all' || (statusFilter === 'active' ? product.isAvailable : !product.isAvailable))).map((product) => (
+          ) : products.filter((product) => (!productQuery.trim() || product.name.toLowerCase().includes(productQuery.trim().toLowerCase())) && (statusFilter === 'all' || (statusFilter === 'active' ? product.isAvailable : !product.isAvailable)) && (stockStatusFilter === 'all' || (stockStatusFilter === 'available' ? product.stockQuantity > 5 : stockStatusFilter === 'low-stock' ? product.stockQuantity > 0 && product.stockQuantity <= 5 : product.stockQuantity === 0))).map((product) => (
             <View key={product.id} style={styles.productRow}>
               <TouchableOpacity style={styles.productIcon} onPress={() => onEditProduct(product)}><Ionicons name="cube-outline" size={20} color="#208AEF" /></TouchableOpacity>
-              <TouchableOpacity style={styles.productInfo} onPress={() => onEditProduct(product)}><Text style={styles.productName}>{product.name}</Text><Text style={styles.productMeta}>{product.dosage ?? 'Dosage unspecified'} • {product.stockQuantity} in stock • {product.isAvailable ? 'Active' : 'Inactive'}</Text><Text style={styles.productMeta}>Consumer {product.consumerPrice.toFixed(2)} • Discount {product.discountPercentage}%</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.productInfo} onPress={() => onEditProduct(product)}><Text style={styles.productName}>{product.name}</Text><Text style={styles.productMeta}>{product.dosage ?? 'Dosage unspecified'} • {product.stockQuantity} in stock • {getStockStatus(product.stockQuantity, product.isAvailable).replace('-', ' ')}</Text><Text style={styles.productMeta}>Consumer {product.consumerPrice.toFixed(2)} • Discount {product.discountPercentage}%</Text></TouchableOpacity>
               <View style={styles.productActions}><Text style={styles.productPrice}>{product.pharmacyPriceAfterDiscount.toFixed(2)} EGP</Text><TouchableOpacity onPress={() => { database.setProviderProductStatus(product.id, !product.isAvailable); refresh((value) => value + 1); }}><Text style={styles.toggleText}>{product.isAvailable ? 'Deactivate' : 'Activate'}</Text></TouchableOpacity></View>
             </View>
           ))}

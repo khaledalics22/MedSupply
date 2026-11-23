@@ -10,6 +10,7 @@ import {
   type StoreInput,
   type ManufacturerInput,
   type ProductInput,
+  type OrderLineSnapshot,
 } from './data_types';
 
 export abstract class Database {
@@ -43,6 +44,8 @@ export abstract class Database {
   abstract setProviderProductStatus(productId: string, isAvailable: boolean): Product;
   abstract findSimilarProviderProducts(providerType: ProducerType, providerId: string, name: string): Product[];
   abstract findProviderProductDuplicate(providerType: ProducerType, providerId: string, name: string, dosage: string, excludeProductId?: string): Product | undefined;
+  abstract validateOrderStock(lines: OrderLineSnapshot[]): string[];
+  abstract approveAndDeductOrderStock(lines: OrderLineSnapshot[]): { success: boolean; errors: string[] };
 }
 
 export class MockDatabase extends Database {
@@ -348,6 +351,60 @@ export class MockDatabase extends Database {
     this.products = this.products.map((product) => product.id === productId ? updated : product);
     return updated;
   }
+
+  validateOrderStock(lines: OrderLineSnapshot[]): string[] {
+    const errors: string[] = [];
+    const productQuantities: { [key: string]: number } = {};
+
+    lines.forEach((line) => {
+      if (!Number.isInteger(line.quantity) || line.quantity <= 0) {
+        errors.push(`Invalid quantity for ${line.sellerName} — ${line.productName}`);
+        return;
+      }
+      productQuantities[line.productId] = (productQuantities[line.productId] || 0) + line.quantity;
+    });
+
+    for (const [productId, quantity] of Object.entries(productQuantities)) {
+      const product = this.getProductById(productId);
+      if (!product) {
+        errors.push(`Product not found: ${productId}`);
+        continue;
+      }
+      if (!product.isAvailable || product.stockQuantity <= 0) {
+        errors.push(`${productId}: product is unavailable or out of stock`);
+        continue;
+      }
+      if (product.sellerType === ProducerType.Store && this.getStoreById(product.sellerId)?.status !== 'active') {
+        errors.push(`${productId}: store provider is inactive`);
+      }
+      if (product.sellerType === ProducerType.Manufacturer && this.getFactoryById(product.sellerId)?.status !== 'active') {
+        errors.push(`${productId}: manufacturer provider is inactive`);
+      }
+      if (product.stockQuantity < quantity) {
+        errors.push(`${productId}: requested ${quantity}, available ${product.stockQuantity}`);
+      }
+    }
+
+    return errors;
+  }
+
+  approveAndDeductOrderStock(lines: OrderLineSnapshot[]): { success: boolean; errors: string[] } {
+    const errors = this.validateOrderStock(lines);
+    if (errors.length > 0) return { success: false, errors };
+
+    const quantities: { [productId: string]: number } = {};
+    lines.forEach((line) => { quantities[line.productId] = (quantities[line.productId] || 0) + line.quantity; });
+
+    for (const [productId, quantity] of Object.entries(quantities)) {
+      const product = this.getProductById(productId);
+      if (!product || !Number.isInteger(quantity) || quantity <= 0 || product.stockQuantity < quantity) {
+        return { success: false, errors: [`Atomic stock validation failed for ${productId}`] };
+      }
+    }
+
+    for (const [productId, quantity] of Object.entries(quantities)) this.deductProductStock(productId, quantity);
+    return { success: true, errors: [] };
+  }
 }
 
 export default function DatabaseModule() { return null; }
@@ -378,4 +435,12 @@ export function calculatePharmacistPrice(consumerPrice: number, discountPercenta
   if (!Number.isFinite(consumerPrice) || consumerPrice <= 0) return 0;
   if (!Number.isFinite(discountPercentage) || discountPercentage < 0 || discountPercentage > 100) return 0;
   return roundCurrency(consumerPrice * (1 - discountPercentage / 100));
+}
+
+export const LOW_STOCK_THRESHOLD = 5;
+
+export function getStockStatus(stockQuantity: number, isAvailable: boolean): 'available' | 'low-stock' | 'out-of-stock' {
+  if (stockQuantity <= 0 || !isAvailable) return 'out-of-stock';
+  if (stockQuantity <= LOW_STOCK_THRESHOLD) return 'low-stock';
+  return 'available';
 }

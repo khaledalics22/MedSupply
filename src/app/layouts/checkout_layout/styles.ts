@@ -85,4 +85,32 @@ export default StyleSheet.create({
     fontWeight: '800',
     fontSize: 16,
   },
+  issuesBox: {
+    backgroundColor: '#FFF1F2',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FECDD3',
+    padding: 12,
+    marginBottom: 12,
+  },
+  issuesTitle: {
+    color: '#BE123C',
+    fontWeight: '900',
+    marginBottom: 5,
+  },
+  issueText: {
+    color: '#9F1239',
+    lineHeight: 18,
+  },
+  confirmationMessage: {
+    backgroundColor: '#DCFCE7',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 12,
+  },
+  confirmationText: {
+    color: '#16794A',
+    textAlign: 'center',
+    fontWeight: '800',
+  },
 });

@@ -179,3 +179,13 @@ export interface ProductInput {
   packageSize?: string;
   variant?: string;
 }
+
+export type StockStatus = 'available' | 'low-stock' | 'out-of-stock';
+
+export interface CheckoutValidationIssue {
+  productId: string;
+  productName: string;
+  currentStock: number;
+  requestedQuantity: number;
+  reason: 'inactive-product' | 'inactive-provider' | 'unavailable' | 'insufficient-stock';
+}

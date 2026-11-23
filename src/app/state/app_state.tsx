@@ -20,7 +20,10 @@ type AppStateContextValue = {
   unreadNotifications: number;
   markNotificationRead: (id: string) => void;
   orders: Order[];
-  createOrder: () => boolean;
+  createOrder: () => {
+    success: boolean;
+    issues: Array<{ productId: string; productName: string; currentStock: number; requestedQuantity: number; reason: 'inactive-product' | 'inactive-provider' | 'unavailable' | 'insufficient-stock' }>;
+  };
   favoriteStores: string[];
   toggleFavoriteStore: (storeId: string) => void;
   approveOrder: (orderId: string) => { success: boolean; errors: string[] };
@@ -85,19 +88,41 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setCart((previous) => previous.filter((item) => item.productId !== productId));
   };
 
-  const createOrder = (): boolean => {
-    if (cart.length === 0) return false;
+  const createOrder = (): {
+    success: boolean;
+    issues: Array<{ productId: string; productName: string; currentStock: number; requestedQuantity: number; reason: 'inactive-product' | 'inactive-provider' | 'unavailable' | 'insufficient-stock' }>;
+  } => {
+    if (cart.length === 0) return { success: false, issues: [] };
 
     const database = iocContainer.getDatabase();
+    const issues: Array<{ productId: string; productName: string; currentStock: number; requestedQuantity: number; reason: 'inactive-product' | 'inactive-provider' | 'unavailable' | 'insufficient-stock' }> = [];
+
+    for (const item of cart) {
+      const product = database.getProductById(item.productId);
+      if (!product) {
+        issues.push({ productId: item.productId, productName: item.productName, currentStock: 0, requestedQuantity: item.quantity, reason: 'unavailable' });
+        continue;
+      }
+      if (!product.isAvailable || product.stockQuantity <= 0) {
+        issues.push({ productId: item.productId, productName: item.productName, currentStock: product.stockQuantity, requestedQuantity: item.quantity, reason: 'inactive-product' });
+        continue;
+      }
+      if (product.sellerType === 'store' && database.getStoreById(product.sellerId)?.status !== 'active') {
+        issues.push({ productId: item.productId, productName: item.productName, currentStock: product.stockQuantity, requestedQuantity: item.quantity, reason: 'inactive-provider' });
+        continue;
+      }
+      if (product.sellerType === 'manufacturer' && database.getFactoryById(product.sellerId)?.status !== 'active') {
+        issues.push({ productId: item.productId, productName: item.productName, currentStock: product.stockQuantity, requestedQuantity: item.quantity, reason: 'inactive-provider' });
+        continue;
+      }
+      if (product.stockQuantity < item.quantity) {
+        issues.push({ productId: item.productId, productName: item.productName, currentStock: product.stockQuantity, requestedQuantity: item.quantity, reason: 'insufficient-stock' });
+      }
+    }
+
+    if (issues.length > 0) return { success: false, issues };
 
     try {
-      for (const item of cart) {
-        const product = database.getProductById(item.productId);
-        if (!product || !product.isAvailable || product.stockQuantity < item.quantity) return false;
-        if (product.sellerType === 'store' && database.getStoreById(product.sellerId)?.status !== 'active') return false;
-        if (product.sellerType === 'manufacturer' && database.getFactoryById(product.sellerId)?.status !== 'active') return false;
-      }
-
       const lines: OrderLineSnapshot[] = cart.map((item) => ({
         productId: item.productId,
         productName: item.productName,
@@ -129,9 +154,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
       setOrders((previous) => [order, ...previous]);
       setCart([]);
-      return true;
+      return { success: true, issues: [] };
     } catch {
-      return false;
+      return { success: false, issues: [] };
     }
   };
 
@@ -151,21 +176,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
 
     const database = iocContainer.getDatabase();
-    const errors: string[] = [];
-    for (const line of order.items) {
-      const product = database.getProductById(line.productId);
-      if (!product || !product.isAvailable) {
-        errors.push(`${line.sellerName} — ${line.productName}${line.dosage ? ` (${line.dosage})` : ''}: product unavailable`);
-      } else if (product.stockQuantity < line.quantity) {
-        errors.push(`${line.sellerName} — ${line.productName}${line.dosage ? ` (${line.dosage})` : ''}: requested ${line.quantity}, available ${product.stockQuantity}`);
-      }
-      if (line.sellerType === 'store' && database.getStoreById(line.sellerId)?.status !== 'active') errors.push(`${line.sellerName} — store is inactive`);
-      if (line.sellerType === 'manufacturer' && database.getFactoryById(line.sellerId)?.status !== 'active') errors.push(`${line.sellerName} — manufacturer is inactive`);
-    }
+    const result = database.approveAndDeductOrderStock(order.items);
+    if (!result.success) return result;
 
-    if (errors.length > 0) return { success: false, errors };
-
-    for (const line of order.items) database.deductProductStock(line.productId, line.quantity);
     approvedOrderIds.current.add(orderId);
     setOrders((previous) => previous.map((item) => item.id === orderId ? { ...item, status: 'approved', approvedAt: new Date().toISOString(), stockDeducted: true } : item));
     return { success: true, errors: [] };
