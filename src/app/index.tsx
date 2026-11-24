@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
-import { View } from 'react-native';
+import { View, TouchableOpacity, Text } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 
 import NavBar, { Tab } from './components/nav_bar';
 import CartLayout from './layouts/cart_layout';
@@ -70,7 +71,7 @@ function AppContent() {
     }
 
     if (showCart) {
-      return <CartLayout onAddItems={() => { setShowCart(false); setTab('search'); }} onCheckout={() => { setShowCart(false); setShowCheckout(true); }} />;
+      return <CartLayout onBack={() => setShowCart(false)} onAddItems={() => { setShowCart(false); setTab('search'); }} onCheckout={() => { setShowCart(false); setShowCheckout(true); }} />;
     }
 
     if (selectedProductId) {
@@ -134,19 +135,32 @@ function AppContent() {
 
     }
 
-    if (tab === 'cart') return <CartLayout onAddItems={() => setTab('search')} onCheckout={() => setShowCheckout(true)} />;
     if (tab === 'orders') return <OrdersLayout language={language} onBack={() => setTab('home')} />;
 
-    return <ProfileLayout language={language} onBack={() => setTab('home')} />;
+    const showProfile = tab === 'profile' && !showCart && !showCheckout && !showNotifications && !selectedProductId && !selectedItem && !selectedSpecialtyId && !selectedCategory;
+
+    return showProfile ? <ProfileLayout language={language} onBack={() => setTab('home')} /> : null;
   };
 
   const showTabBar = !showCart && !showNotifications && !showCheckout && !selectedProductId && !selectedItem && !selectedSpecialtyId && !selectedCategory;
+  const showGlobalCart = tab !== 'profile' && !showCart && !showCheckout && !showNotifications;
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={styles.container}>
       <StatusBar style="light" />
       <View style={styles.content}>{renderContent()}</View>
       {showTabBar && <NavBar active={tab} language={language} onChange={(nextTab) => setTab(nextTab)} />}
+      {showGlobalCart && (
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => setShowCart(true)}
+          accessibilityLabel={`Cart, ${cartCount} items`}
+          style={{ position: 'absolute', right: 18, bottom: showTabBar ? 86 : 18, width: 52, height: 52, borderRadius: 26, backgroundColor: '#208AEF', alignItems: 'center', justifyContent: 'center', zIndex: 20, elevation: 8, shadowColor: '#102A43', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } }}
+        >
+          <Ionicons name="cart-outline" size={24} color="#FFFFFF" />
+          {cartCount > 0 && <View style={{ position: 'absolute', top: -3, right: -3, minWidth: 20, height: 20, borderRadius: 10, backgroundColor: '#FF5A5F', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}><Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '900' }}>{cartCount}</Text></View>}
+        </TouchableOpacity>
+      )}
     </SafeAreaView>
   );
 }

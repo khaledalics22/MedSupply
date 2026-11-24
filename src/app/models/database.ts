@@ -129,8 +129,14 @@ export class MockDatabase extends Database {
   getAvailableProducts(): Product[] {
     return this.products.filter((product) => {
       if (!product.isAvailable || product.stockQuantity <= 0) return false;
-      if (product.sellerType === ProducerType.Store && this.getStoreById(product.sellerId)?.status !== 'active') throw new Error('This store is currently inactive');
-      if (product.sellerType === ProducerType.Manufacturer && this.getFactoryById(product.sellerId)?.status !== 'active') throw new Error('This manufacturer is currently inactive');
+      if (product.sellerType === ProducerType.Store) {
+        const store = this.getStoreById(product.sellerId);
+        if (!store || store.status !== 'active') return false;
+      }
+      if (product.sellerType === ProducerType.Manufacturer) {
+        const manufacturer = this.getFactoryById(product.sellerId);
+        if (!manufacturer || manufacturer.status !== 'active') return false;
+      }
       return true;
     });
   }
@@ -312,7 +318,7 @@ export class MockDatabase extends Database {
       discountPercentage: roundCurrency(input.discountPercentage),
       pharmacyPriceAfterDiscount: calculatePharmacistPrice(input.consumerPrice, input.discountPercentage),
       stockQuantity: input.stockQuantity,
-      isAvailable: input.isAvailable,
+      isAvailable: input.isAvailable && input.stockQuantity > 0,
       expiryDate: input.expiryDate?.trim() || undefined,
     };
     this.products = [...this.products, product];

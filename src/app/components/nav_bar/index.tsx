@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LanguageCode, t } from '../../i18n';
 import styles from './styles';
 
-export type Tab = 'home' | 'search' | 'cart' | 'orders' | 'profile';
+export type Tab = 'home' | 'search' | 'orders' | 'profile';
 
 type NavBarProps = {
   active: Tab;
@@ -20,7 +20,6 @@ export default function NavBar({ active, language, onChange }: NavBarProps) {
   const tabs: { key: Tab; icon: keyof typeof Ionicons.glyphMap; label: string }[] = [
     { key: 'home', icon: 'home', label: t('home', language) },
     { key: 'search', icon: 'search', label: t('search', language) },
-    { key: 'cart', icon: 'cart', label: 'Cart' },
     { key: 'orders', icon: 'receipt', label: 'Orders' },
     { key: 'profile', icon: 'person', label: 'Profile' },
   ];

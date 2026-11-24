@@ -113,4 +113,47 @@ export default StyleSheet.create({
     textAlign: 'center',
     fontWeight: '800',
   },
+  providerGroup: {
+    marginBottom: 12,
+  },
+  providerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#EEF6FF',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 6,
+  },
+  providerName: {
+    color: '#102A43',
+    fontWeight: '900',
+  },
+  providerType: {
+    color: '#208AEF',
+    fontSize: 12,
+    marginTop: 2,
+    fontWeight: '700',
+  },
+  providerSubtotal: {
+    color: '#102A43',
+    fontWeight: '900',
+  },
+  checkoutItemInfo: {
+    flex: 1,
+    marginRight: 8,
+  },
+  checkoutDosage: {
+    color: '#718096',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  checkoutMeta: {
+    color: '#718096',
+    fontSize: 11,
+    marginTop: 3,
+  },
+  confirmButtonDisabled: {
+    opacity: 0.55,
+  },
 });

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import { type LanguageCode } from '../../i18n';
@@ -14,19 +14,36 @@ export default function CheckoutLayout({
   onBack: () => void;
   onComplete: () => void;
 }) {
-  const { cart, cartTotal, createOrder } = useAppState();
+  const { cart, cartTotal, createOrder, orders } = useAppState();
   const [orderConfirmed, setOrderConfirmed] = useState(false);
   const [issues, setIssues] = useState<Array<{ productName: string; currentStock: number; requestedQuantity: number; reason: string }>>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
+
+  const providerGroups = new Map<string, { name: string; type: 'store' | 'manufacturer'; items: typeof cart }>();
+  cart.forEach((item) => {
+    const key = `${item.sellerType}-${item.sellerId}`;
+    const existing = providerGroups.get(key);
+    if (existing) existing.items.push(item);
+    else providerGroups.set(key, { name: item.sellerName, type: item.sellerType, items: [item] });
+  });
 
   const handleConfirm = () => {
+    if (submittingRef.current || cart.length === 0) return;
+    submittingRef.current = true;
+    setSubmitting(true);
+
     const result = createOrder();
     if (result.success) {
       setOrderConfirmed(true);
       setIssues([]);
+      submittingRef.current = false;
       onComplete();
     } else {
       setIssues(result.issues);
+      submittingRef.current = false;
     }
+    setSubmitting(false);
   };
 
   return (
@@ -54,26 +71,41 @@ export default function CheckoutLayout({
         {cart.length === 0 ? (
           <Text style={styles.empty}>Your cart is empty.</Text>
         ) : (
-          cart.map((item) => (
-            <View key={item.productId} style={styles.row}>
-              <Text style={styles.label}>{item.productName} x {item.quantity}</Text>
-              <Text style={styles.value}>{item.quantity * item.unitPrice} EGP</Text>
-            </View>
-          ))
+          Array.from(providerGroups.values()).map((group) => {
+            const subtotal = group.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+            return (
+              <View key={`${group.type}-${group.items[0].sellerId}`} style={styles.providerGroup}>
+                <View style={styles.providerHeader}>
+                  <View><Text style={styles.providerName}>{group.name}</Text><Text style={styles.providerType}>{group.type === 'store' ? 'Store' : 'Manufacturer'}</Text></View>
+                  <Text style={styles.providerSubtotal}>{subtotal.toFixed(2)} EGP</Text>
+                </View>
+                {group.items.map((item) => (
+                  <View key={item.productId} style={styles.row}>
+                    <View style={styles.checkoutItemInfo}>
+                      <Text style={styles.label}>{item.productName}</Text>
+                      {item.dosage ? <Text style={styles.checkoutDosage}>Dosage: {item.dosage}</Text> : null}
+                      <Text style={styles.checkoutMeta}>Qty {item.quantity} × {item.unitPrice.toFixed(2)} EGP • -{item.discountPercentage}%</Text>
+                    </View>
+                    <Text style={styles.value}>{(item.unitPrice * item.quantity).toFixed(2)} EGP</Text>
+                  </View>
+                ))}
+              </View>
+            );
+          })
         )}
         <View style={styles.totalRow}>
           <Text style={styles.totalLabel}>Total</Text>
-          <Text style={styles.totalValue}>{cartTotal} EGP</Text>
+          <Text style={styles.totalValue}>{cartTotal.toFixed(2)} EGP</Text>
         </View>
       </View>
 
-      <TouchableOpacity activeOpacity={0.8} onPress={handleConfirm} style={styles.confirmButton}>
-        <Text style={styles.confirmText}>Confirm Order</Text>
+      <TouchableOpacity activeOpacity={0.8} disabled={submitting || cart.length === 0} onPress={handleConfirm} style={[styles.confirmButton, (submitting || cart.length === 0) && styles.confirmButtonDisabled]}>
+        <Text style={styles.confirmText}>{submitting ? 'Placing order...' : 'Place Order'}</Text>
       </TouchableOpacity>
 
       {orderConfirmed && (
         <View style={styles.confirmationMessage}>
-          <Text style={styles.confirmationText}>Thank you! Your order has been confirmed.</Text>
+          <Text style={styles.confirmationText}>Thank you! Your order has been confirmed. Order ID: {orders[0]?.id}</Text>
         </View>
       )}
     </View>

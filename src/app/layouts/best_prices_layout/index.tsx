@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FlatList, Text, TouchableOpacity, View } from 'react-native';
 
 import AppHeader from '../../components/app_header';
@@ -13,7 +13,18 @@ export default function BestPricesLayout({ language, onBack, onProductSelected }
   const database = iocContainer.getDatabase();
   const { cart, addToCart, updateQuantity } = useAppState();
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [sortMode, setSortMode] = useState<'priceAsc' | 'priceDesc' | 'discount'>('priceAsc');
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(query);
+    }, 300);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [query]);
 
   const cards = useMemo(() => {
     return database.getAvailableProducts()
@@ -32,7 +43,7 @@ export default function BestPricesLayout({ language, onBack, onProductSelected }
   }, [database]);
 
   const filtered = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
+    const normalized = debouncedQuery.trim().toLowerCase();
     return cards
       .filter((card) => !normalized || card.product.name.toLowerCase().includes(normalized) || card.sellerName.toLowerCase().includes(normalized))
       .sort((left, right) => {
@@ -40,7 +51,7 @@ export default function BestPricesLayout({ language, onBack, onProductSelected }
         if (sortMode === 'discount') return right.product.discountPercentage - left.product.discountPercentage;
         return left.product.pharmacyPriceAfterDiscount - right.product.pharmacyPriceAfterDiscount;
       });
-  }, [cards, query, sortMode]);
+  }, [cards, debouncedQuery, sortMode]);
 
   return (
     <View style={styles.container}>
