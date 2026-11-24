@@ -39,6 +39,7 @@ export default function StoreManagementLayout({ onBack, onAddStore, onStoreSelec
                 <Text style={styles.storeMeta}>{item.contactPerson}</Text>
                 <Text style={styles.storeMeta}>{item.phone}</Text>
                 <Text style={styles.storeMeta} numberOfLines={1}>{item.address}</Text>
+                <Text style={styles.storeMeta}>{database.getProductsByStore(item.id).length} products</Text>
               </View>
               <View style={[styles.status, item.status === 'active' ? styles.active : styles.inactive]}>
                 <Text style={[styles.statusText, item.status === 'active' ? styles.activeText : styles.inactiveText]}>{item.status}</Text>

@@ -7,9 +7,9 @@ import { iocContainer } from '../../models/ioc_container';
 import { useAppState } from '../../state/app_state';
 import styles from './styles';
 
-export default function AdminOrdersLayout({ onBack, onOrderSelected }: { onBack: () => void; onOrderSelected: (orderId: string) => void }) {
+export default function AdminOrdersLayout({ onBack, onOrderSelected, initialStatus }: { onBack: () => void; onOrderSelected: (orderId: string) => void; initialStatus?: 'all' | OrderStatus }) {
   const { orders } = useAppState();
-  const [statusFilter, setStatusFilter] = useState<'all' | OrderStatus>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | OrderStatus>(initialStatus ?? 'all');
   const [query, setQuery] = useState('');
 
   const filtered = useMemo(() => {

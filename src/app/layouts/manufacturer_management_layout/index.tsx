@@ -37,6 +37,7 @@ export default function ManufacturerManagementLayout({ onBack, onAdd, onSelected
                 <Text style={styles.meta}>{item.contactPerson}</Text>
                 <Text style={styles.meta}>{item.phone}</Text>
                 <Text style={styles.meta} numberOfLines={1}>{typeof item.location === 'string' ? item.location : item.address ?? 'Address unavailable'}</Text>
+                <Text style={styles.meta}>{database.getProductsByManufacturer(item.id).length} products</Text>
               </View>
               <View style={[styles.status, item.status === 'active' ? styles.active : styles.inactive]}><Text style={[styles.statusText, item.status === 'active' ? styles.activeText : styles.inactiveText]}>{item.status}</Text></View>
             </TouchableOpacity>

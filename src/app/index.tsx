@@ -40,6 +40,7 @@ import { ProducerType, type Product } from './models/data_types';
 import { CategoryType, Item, ItemType } from './utils/types';
 import AdminOrdersLayout from './layouts/admin_orders_layout';
 import AdminOrderDetailLayout from './layouts/admin_order_detail_layout';
+import AdminProductOverviewLayout from './layouts/admin_product_overview_layout';
 
 function AppContent() {
   const [tab, setTab] = useState<Tab>('home');
@@ -196,7 +197,7 @@ function RoleBasedApp() {
 }
 
 function AdminApp() {
-  const [screen, setScreen] = useState<'dashboard' | 'store-list' | 'store-form' | 'store-detail' | 'manufacturer-list' | 'manufacturer-form' | 'manufacturer-detail' | 'provider-product-form' | 'admin-orders' | 'admin-order-detail'>('dashboard');
+  const [screen, setScreen] = useState<'dashboard' | 'store-list' | 'store-form' | 'store-detail' | 'manufacturer-list' | 'manufacturer-form' | 'manufacturer-detail' | 'provider-product-form' | 'admin-orders' | 'admin-order-detail' | 'product-overview'>('dashboard');
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
   const [editingStoreId, setEditingStoreId] = useState<string | undefined>(undefined);
   const [selectedFactoryId, setSelectedFactoryId] = useState<string | null>(null);
@@ -207,6 +208,8 @@ function AdminApp() {
   const [providerType, setProviderType] = useState<'store' | 'manufacturer'>('store');
   const [providerId, setProviderId] = useState<string | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [productOverviewStockFilter, setProductOverviewStockFilter] = useState<'all' | 'available' | 'low-stock' | 'out-of-stock'>('all');
+  const [adminOrdersInitialStatus, setAdminOrdersInitialStatus] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'completed'>('all');
 
   const openStoreForm = (storeId?: string) => { setEditingStoreId(storeId); setScreen('store-form'); };
   const openManufacturerForm = (factoryId?: string) => { setEditingFactoryId(factoryId); setScreen('manufacturer-form'); };
@@ -256,10 +259,26 @@ function AdminApp() {
   }
 
   if (screen === 'admin-orders') {
-    return <AdminOrdersLayout onBack={() => setScreen('dashboard')} onOrderSelected={(orderId) => { setSelectedOrderId(orderId); setScreen('admin-order-detail'); }} />;
+    return <AdminOrdersLayout initialStatus={adminOrdersInitialStatus} onBack={() => setScreen('dashboard')} onOrderSelected={(orderId) => { setSelectedOrderId(orderId); setScreen('admin-order-detail'); }} />;
   }
   if (screen === 'admin-order-detail' && selectedOrderId) {
     return <AdminOrderDetailLayout orderId={selectedOrderId} onBack={() => setScreen('admin-orders')} />;
+  }
+
+  if (screen === 'product-overview') {
+    return <AdminProductOverviewLayout
+      onBack={() => setScreen('dashboard')}
+      initialStockFilter={productOverviewStockFilter}
+      onProductSelected={(product) => {
+        if (product.sellerType === 'store') {
+          setSelectedStoreId(product.sellerId);
+          setScreen('store-detail');
+        } else {
+          setSelectedFactoryId(product.sellerId);
+          setScreen('manufacturer-detail');
+        }
+      }}
+    />;
   }
 
   return <AdminLayout
@@ -267,7 +286,9 @@ function AdminApp() {
     onAddStore={() => openStoreForm()}
     onManufacturerManagement={() => setScreen('manufacturer-list')}
     onAddManufacturer={() => openManufacturerForm()}
-    onManageOrders={() => setScreen('admin-orders')}
+    onManageOrders={(status) => { setAdminOrdersInitialStatus(status ?? 'all'); setScreen('admin-orders'); }}
+    onProductOverview={() => { setProductOverviewStockFilter('all'); setScreen('product-overview'); }}
+    onLowStockOverview={() => { setProductOverviewStockFilter('low-stock'); setScreen('product-overview'); }}
   />;
 }
 
