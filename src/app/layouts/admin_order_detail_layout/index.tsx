@@ -7,10 +7,11 @@ import { useAppState } from '../../state/app_state';
 import styles from './styles';
 
 export default function AdminOrderDetailLayout({ orderId, onBack }: { orderId: string; onBack: () => void }) {
-  const { orders, approveOrder, rejectOrder } = useAppState();
+  const { orders, approveOrder, rejectOrder, completeOrder } = useAppState();
   const order = orders.find((item) => item.id === orderId);
   const [approveConfirm, setApproveConfirm] = useState(false);
   const [rejectConfirm, setRejectConfirm] = useState(false);
+  const [completeConfirm, setCompleteConfirm] = useState(false);
   const [reason, setReason] = useState('');
   const [feedback, setFeedback] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
@@ -40,6 +41,13 @@ export default function AdminOrderDetailLayout({ orderId, onBack }: { orderId: s
     if (rejectOrder(order.id, reason)) { setRejectConfirm(false); setErrors([]); setFeedback('Order rejected. The pharmacist can view the reason.'); }
   };
 
+  const complete = () => {
+    const result = completeOrder(order.id);
+    setCompleteConfirm(false);
+    if (result.success) { setErrors([]); setFeedback('Order completed successfully. No additional stock was deducted.'); }
+    else setErrors(result.errors);
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}><TouchableOpacity style={styles.backButton} onPress={onBack}><Ionicons name="arrow-back" size={20} color="#FFFFFF" /></TouchableOpacity><Text style={styles.title}>Order Details</Text><View style={styles.headerSpace} /></View>
@@ -51,6 +59,7 @@ export default function AdminOrderDetailLayout({ orderId, onBack }: { orderId: s
           <Text style={styles.status}>{order.status}</Text>
           <Info label="Pharmacist" value={order.customerName ?? 'Pharmacist'} />
           <Info label="Order date" value={formatDate(order.createdAt)} />
+          {order.completedAt ? <Info label="Completed date" value={formatDate(order.completedAt)} /> : null}
           <Info label="Total items" value={String(order.totalItems)} />
           <Info label="Overall total" value={`${order.totalPrice.toFixed(2)} EGP`} />
           {order.rejectionReason ? <View style={styles.rejection}><Text style={styles.rejectionLabel}>Rejection reason</Text><Text style={styles.rejectionText}>{order.rejectionReason}</Text></View> : null}
@@ -71,11 +80,14 @@ export default function AdminOrderDetailLayout({ orderId, onBack }: { orderId: s
         })}
 
         {order.status === 'pending' ? <View style={styles.actions}><TouchableOpacity style={styles.rejectButton} onPress={() => { setErrors([]); setRejectConfirm(true); }}><Text style={styles.rejectText}>Reject Order</Text></TouchableOpacity><TouchableOpacity style={styles.approveButton} onPress={() => { setErrors([]); setApproveConfirm(true); }}><Text style={styles.approveText}>Approve Order</Text></TouchableOpacity></View> : null}
+        {order.status === 'approved' ? <View style={styles.actions}><TouchableOpacity style={styles.approveButton} onPress={() => { setErrors([]); setCompleteConfirm(true); }}><Text style={styles.approveText}>Complete Entire Order</Text></TouchableOpacity></View> : null}
       </ScrollView>
 
       <Modal visible={approveConfirm} transparent animationType="fade" onRequestClose={() => setApproveConfirm(false)}><View style={styles.modalBackdrop}><View style={styles.modalCard}><Text style={styles.modalTitle}>Approve entire order?</Text><Text style={styles.modalText}>Stock for every provider-owned item will be validated and deducted once.</Text><View style={styles.modalActions}><TouchableOpacity style={styles.cancelButton} onPress={() => setApproveConfirm(false)}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity><TouchableOpacity style={styles.confirmApprove} onPress={approve}><Text style={styles.confirmText}>Approve</Text></TouchableOpacity></View></View></View></Modal>
 
       <Modal visible={rejectConfirm} transparent animationType="fade" onRequestClose={() => setRejectConfirm(false)}><View style={styles.modalBackdrop}><View style={styles.modalCard}><Text style={styles.modalTitle}>Reject entire order?</Text><Text style={styles.modalText}>Provide a clear reason for the pharmacist.</Text><TextInput value={reason} onChangeText={setReason} placeholder="Rejection reason" style={styles.reasonInput} multiline /><View style={styles.modalActions}><TouchableOpacity style={styles.cancelButton} onPress={() => setRejectConfirm(false)}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity><TouchableOpacity style={styles.confirmReject} onPress={reject}><Text style={styles.confirmText}>Reject</Text></TouchableOpacity></View></View></View></Modal>
+
+      <Modal visible={completeConfirm} transparent animationType="fade" onRequestClose={() => setCompleteConfirm(false)}><View style={styles.modalBackdrop}><View style={styles.modalCard}><Text style={styles.modalTitle}>Complete entire order?</Text><Text style={styles.modalText}>No additional stock will be deducted, but the order will be marked as complete.</Text><View style={styles.modalActions}><TouchableOpacity style={styles.cancelButton} onPress={() => setCompleteConfirm(false)}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity><TouchableOpacity style={styles.confirmComplete} onPress={complete}><Text style={styles.confirmText}>Complete</Text></TouchableOpacity></View></View></View></Modal>
     </View>
   );
 }

@@ -3,7 +3,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, type R
 
 import { LanguageCode } from '../i18n';
 import { iocContainer } from '../models/ioc_container';
-import type { CartItem, Order, OrderLineSnapshot } from '../models/data_types';
+import type { CartItem, CheckoutValidationIssue, Order, OrderLineSnapshot } from '../models/data_types';
 import { useAuthState } from './auth_state';
 
 export type NotificationItem = { id: string; title: string; message: string; read: boolean; createdAt: string };
@@ -15,20 +15,19 @@ type AppStateContextValue = {
   addToCart: (productId: string, quantity?: number) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   removeFromCart: (productId: string) => void;
+  refreshCartPricing: () => CheckoutValidationIssue[];
   cartTotal: number;
   cartCount: number;
   notifications: NotificationItem[];
   unreadNotifications: number;
   markNotificationRead: (id: string) => void;
   orders: Order[];
-  createOrder: () => {
-    success: boolean;
-    issues: Array<{ productId: string; productName: string; currentStock: number; requestedQuantity: number; reason: 'inactive-product' | 'inactive-provider' | 'unavailable' | 'insufficient-stock' }>;
-  };
+  createOrder: () => { success: boolean; issues: CheckoutValidationIssue[]; orderId?: string };
   favoriteStores: string[];
   toggleFavoriteStore: (storeId: string) => void;
   approveOrder: (orderId: string) => { success: boolean; errors: string[] };
   rejectOrder: (orderId: string, reason: string) => boolean;
+  completeOrder: (orderId: string) => { success: boolean; errors: string[] };
   reorderOrder: (orderId: string) => {
     added: Array<{ productName: string; quantity: number }>;
     limited: Array<{ productName: string; requested: number; added: number; available: number }>;
@@ -93,14 +92,37 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setCart((previous) => previous.filter((item) => item.productId !== productId));
   };
 
+  const refreshCartPricing = (): CheckoutValidationIssue[] => {
+    const database = iocContainer.getDatabase();
+    const issues: CheckoutValidationIssue[] = [];
+
+    setCart((previous) => previous.map((item) => {
+      const product = database.getProductById(item.productId);
+      if (!product) {
+        issues.push({ productId: item.productId, productName: item.productName, currentStock: 0, requestedQuantity: item.quantity, reason: 'unavailable' });
+        return item;
+      }
+      if (item.consumerPrice !== undefined && item.consumerPrice !== product.consumerPrice) {
+        issues.push({ productId: item.productId, productName: item.productName, currentStock: product.stockQuantity, requestedQuantity: item.quantity, reason: 'price-change', oldConsumerPrice: item.consumerPrice, currentConsumerPrice: product.consumerPrice, oldPharmacistPrice: item.unitPrice, currentPharmacistPrice: product.pharmacyPriceAfterDiscount });
+      }
+      if (item.discountPercentage !== product.discountPercentage) {
+        issues.push({ productId: item.productId, productName: item.productName, currentStock: product.stockQuantity, requestedQuantity: item.quantity, reason: 'discount-change', oldDiscount: item.discountPercentage, currentDiscount: product.discountPercentage, oldPharmacistPrice: item.unitPrice, currentPharmacistPrice: product.pharmacyPriceAfterDiscount });
+      }
+      return { ...item, unitPrice: product.pharmacyPriceAfterDiscount, discountPercentage: product.discountPercentage, consumerPrice: product.consumerPrice, pharmacyPriceAtPurchase: product.pharmacyPriceAfterDiscount, productName: product.name, dosage: product.dosage };
+    }));
+
+    return issues;
+  };
+
   const createOrder = (): {
     success: boolean;
-    issues: Array<{ productId: string; productName: string; currentStock: number; requestedQuantity: number; reason: 'inactive-product' | 'inactive-provider' | 'unavailable' | 'insufficient-stock' }>;
+    issues: CheckoutValidationIssue[];
+    orderId?: string;
   } => {
     if (cart.length === 0) return { success: false, issues: [] };
 
     const database = iocContainer.getDatabase();
-    const issues: Array<{ productId: string; productName: string; currentStock: number; requestedQuantity: number; reason: 'inactive-product' | 'inactive-provider' | 'unavailable' | 'insufficient-stock' }> = [];
+    const issues: CheckoutValidationIssue[] = [];
 
     for (const item of cart) {
       const product = database.getProductById(item.productId);
@@ -123,27 +145,37 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       if (product.stockQuantity < item.quantity) {
         issues.push({ productId: item.productId, productName: item.productName, currentStock: product.stockQuantity, requestedQuantity: item.quantity, reason: 'insufficient-stock' });
       }
+      if (item.consumerPrice !== undefined && item.consumerPrice !== product.consumerPrice) {
+        issues.push({ productId: item.productId, productName: item.productName, currentStock: product.stockQuantity, requestedQuantity: item.quantity, reason: 'price-change', oldConsumerPrice: item.consumerPrice, currentConsumerPrice: product.consumerPrice, oldPharmacistPrice: item.unitPrice, currentPharmacistPrice: product.pharmacyPriceAfterDiscount });
+      }
+      if (item.discountPercentage !== product.discountPercentage) {
+        issues.push({ productId: item.productId, productName: item.productName, currentStock: product.stockQuantity, requestedQuantity: item.quantity, reason: 'discount-change', oldDiscount: item.discountPercentage, currentDiscount: product.discountPercentage, oldPharmacistPrice: item.unitPrice, currentPharmacistPrice: product.pharmacyPriceAfterDiscount });
+      }
     }
 
     if (issues.length > 0) return { success: false, issues };
 
     try {
-      const lines: OrderLineSnapshot[] = cart.map((item) => ({
-        productId: item.productId,
-        productName: item.productName,
-        dosage: item.dosage,
-        packageSize: item.packageSize,
-        variant: item.variant,
-        sellerId: item.sellerId,
-        sellerName: item.sellerName,
-        sellerType: item.sellerType,
-        unitPrice: item.unitPrice,
-        discountPercentage: item.discountPercentage,
-        quantity: item.quantity,
-        lineTotal: item.unitPrice * item.quantity,
-        consumerPrice: item.consumerPrice,
-        pharmacyPriceAfterDiscount: item.pharmacyPriceAtPurchase,
-      }));
+      const lines: OrderLineSnapshot[] = cart.map((item) => {
+        const product = database.getProductById(item.productId)!;
+        const pharmacistPrice = product.pharmacyPriceAfterDiscount;
+        return {
+          productId: item.productId,
+          productName: product.name,
+          dosage: product.dosage,
+          packageSize: product.packageSize,
+          variant: product.variant,
+          sellerId: item.sellerId,
+          sellerName: item.sellerName,
+          sellerType: item.sellerType,
+          unitPrice: pharmacistPrice,
+          discountPercentage: product.discountPercentage,
+          quantity: item.quantity,
+          lineTotal: pharmacistPrice * item.quantity,
+          consumerPrice: product.consumerPrice,
+          pharmacyPriceAfterDiscount: pharmacistPrice,
+        };
+      });
 
       const order: Order = {
         id: `ORD-${Date.now()}`,
@@ -159,7 +191,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
       setOrders((previous) => [order, ...previous]);
       setCart([]);
-      return { success: true, issues: [] };
+      return { success: true, issues: [], orderId: order.id };
     } catch {
       return { success: false, issues: [] };
     }
@@ -209,6 +241,17 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     return true;
   };
 
+  const completeOrder = (orderId: string): { success: boolean; errors: string[] } => {
+    const order = orders.find((item) => item.id === orderId);
+    if (!order) return { success: false, errors: ['Order not found.'] };
+    if (order.status !== 'approved') return { success: false, errors: ['Only approved orders can be completed.'] };
+
+    setOrders((previous) => previous.map((item) => item.id === orderId
+      ? { ...item, status: 'completed', completedAt: new Date().toISOString() }
+      : item));
+    return { success: true, errors: [] };
+  };
+
   const reorderOrder = (orderId: string): {
     added: Array<{ productName: string; quantity: number }>;
     limited: Array<{ productName: string; requested: number; added: number; available: number }>;
@@ -255,8 +298,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<AppStateContextValue>(() => ({
     language, setLanguage, cart, addToCart, updateQuantity, removeFromCart,
+    refreshCartPricing,
     cartTotal, cartCount, notifications, unreadNotifications, markNotificationRead,
-    orders, createOrder, approveOrder, rejectOrder, favoriteStores, toggleFavoriteStore, reorderOrder,
+    orders, createOrder, approveOrder, rejectOrder, completeOrder, favoriteStores, toggleFavoriteStore, reorderOrder,
     favoriteProducts, toggleFavoriteProduct, isFavoriteProduct: (productId) => favoriteProducts.includes(productId),
   }), [language, cart, cartCount, cartTotal, notifications, unreadNotifications, orders, favoriteStores, favoriteProducts]);
 

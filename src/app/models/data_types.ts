@@ -121,6 +121,7 @@ export interface Order {
   rejectionReason?: string;
   approvedAt?: string;
   rejectedAt?: string;
+  completedAt?: string;
   stockDeducted?: boolean;
 }
 
@@ -187,5 +188,11 @@ export interface CheckoutValidationIssue {
   productName: string;
   currentStock: number;
   requestedQuantity: number;
-  reason: 'inactive-product' | 'inactive-provider' | 'unavailable' | 'insufficient-stock';
+  reason: 'inactive-product' | 'inactive-provider' | 'unavailable' | 'insufficient-stock' | 'price-change' | 'discount-change';
+  oldConsumerPrice?: number;
+  currentConsumerPrice?: number;
+  oldPharmacistPrice?: number;
+  currentPharmacistPrice?: number;
+  oldDiscount?: number;
+  currentDiscount?: number;
 }

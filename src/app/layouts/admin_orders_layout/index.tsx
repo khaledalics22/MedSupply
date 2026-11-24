@@ -27,9 +27,12 @@ export default function AdminOrdersLayout({ onBack, onOrderSelected, initialStat
         <View style={styles.headerSpace} />
       </View>
       <View style={styles.searchRow}><Ionicons name="search" size={20} color="#718096" /><TextInput value={query} onChangeText={setQuery} placeholder="Search order ID or pharmacist" style={styles.searchInput} /></View>
-      <View style={styles.filters}>{(['all', 'pending', 'approved', 'rejected', 'completed'] as const).map((status) => (
-        <TouchableOpacity key={status} style={[styles.filter, statusFilter === status && styles.filterActive]} onPress={() => setStatusFilter(status)}><Text style={[styles.filterText, statusFilter === status && styles.filterTextActive]}>{status}</Text></TouchableOpacity>
-      ))}</View>
+      <View style={styles.filters}>{(['all', 'pending', 'approved', 'rejected', 'completed'] as const).map((status) => {
+        const count = status === 'all' ? orders.length : orders.filter((order) => order.status === status).length;
+        return <TouchableOpacity key={status} style={[styles.filter, statusFilter === status && styles.filterActive]} onPress={() => setStatusFilter(status)}><Text style={[styles.filterText, statusFilter === status && styles.filterTextActive]}>{status === 'all' ? 'All Orders' : status} ({count})</Text></TouchableOpacity>;
+      })}
+        <TouchableOpacity style={styles.filter} onPress={() => { setStatusFilter('all'); setQuery(''); }}><Text style={styles.filterText}>Clear / Reset</Text></TouchableOpacity>
+      </View>
       <FlatList
         data={filtered}
         keyExtractor={(order) => order.id}

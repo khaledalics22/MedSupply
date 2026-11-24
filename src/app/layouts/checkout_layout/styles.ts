@@ -156,4 +156,12 @@ export default StyleSheet.create({
   confirmButtonDisabled: {
     opacity: 0.55,
   },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(15,23,42,.55)', justifyContent: 'center', padding: 20 },
+  modalCard: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 20 },
+  modalTitle: { color: '#102A43', fontSize: 20, fontWeight: '900' },
+  modalText: { color: '#718096', lineHeight: 20, marginTop: 8, marginBottom: 14 },
+  modalActions: { flexDirection: 'row', gap: 10 },
+  cancelButton: { flex: 1, height: 48, borderRadius: 12, borderWidth: 1, borderColor: '#D9E3EF', alignItems: 'center', justifyContent: 'center' },
+  cancelText: { color: '#334E68', fontWeight: '800' },
+  confirmButtonModal: { flex: 1, height: 48, borderRadius: 12, backgroundColor: '#208AEF', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
 });

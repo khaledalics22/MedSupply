@@ -45,6 +45,7 @@ export default function OrdersLayout({ language, onBack }: { language: LanguageC
             <Text style={styles.orderId}>{selectedOrder.id}</Text>
             <Text style={styles.status}>{selectedOrder.status}</Text>
             <Text style={styles.meta}>{selectedOrder.createdAt}</Text>
+            {selectedOrder.completedAt ? <Text style={styles.meta}>Completed: {formatDate(selectedOrder.completedAt)}</Text> : null}
             <Text style={styles.total}>{selectedOrder.totalPrice.toFixed(2)} EGP</Text>
             {selectedOrder.rejectionReason ? <View style={styles.reasonBox}><Text style={styles.reasonLabel}>Rejection reason</Text><Text style={styles.reasonText}>{selectedOrder.rejectionReason}</Text></View> : null}
           </View>
@@ -116,4 +117,9 @@ export default function OrdersLayout({ language, onBack }: { language: LanguageC
       />
     </View>
   );
+}
+
+function formatDate(date: string) {
+  const parsed = new Date(date);
+  return Number.isNaN(parsed.getTime()) ? date : parsed.toLocaleString();
 }
