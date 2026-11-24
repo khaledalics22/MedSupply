@@ -11,7 +11,7 @@ import styles from './styles';
 
 export default function BestPricesLayout({ language, onBack, onProductSelected }: { language: LanguageCode; onBack: () => void; onProductSelected?: (productId: string) => void }) {
   const database = iocContainer.getDatabase();
-  const { cart, addToCart, updateQuantity } = useAppState();
+  const { cart, addToCart, updateQuantity, favoriteProducts, toggleFavoriteProduct } = useAppState();
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [sortMode, setSortMode] = useState<'priceAsc' | 'priceDesc' | 'discount'>('priceAsc');
@@ -82,10 +82,12 @@ export default function BestPricesLayout({ language, onBack, onProductSelected }
               manufacturerName={item.product.sellerType === 'manufacturer' ? item.sellerName : undefined}
               cartQuantity={cartItem?.quantity ?? 0}
               maxQuantity={item.product.stockQuantity}
+              isFavorite={favoriteProducts.includes(item.product.id)}
               onPress={() => onProductSelected?.(item.product.id)}
               onAddToCart={() => addToCart(item.product.id, 1)}
               onIncreaseQuantity={() => updateQuantity(item.product.id, (cartItem?.quantity ?? 0) + 1)}
               onDecreaseQuantity={() => updateQuantity(item.product.id, (cartItem?.quantity ?? 1) - 1)}
+              onToggleFavorite={() => toggleFavoriteProduct(item.product.id)}
             />
           );
         }}

@@ -22,7 +22,7 @@ export default function StoreDetailLayout({
   onProductSelected?: (productId: string) => void;
 }) {
   const database = iocContainer.getDatabase();
-  const { cart, addToCart, updateQuantity, favoriteStores, toggleFavoriteStore, orders } = useAppState();
+  const { cart, addToCart, updateQuantity, favoriteStores, toggleFavoriteStore, orders, favoriteProducts, toggleFavoriteProduct } = useAppState();
   const [tab, setTab] = useState<'medicines' | 'pending' | 'my-orders'>('medicines');
   const [productQuery, setProductQuery] = useState('');
 
@@ -118,6 +118,8 @@ export default function StoreDetailLayout({
                     store={store}
                     cartQuantity={cartItem?.quantity ?? 0}
                     maxQuantity={product.stockQuantity}
+                    isFavorite={favoriteProducts.includes(product.id)}
+                    onToggleFavorite={() => toggleFavoriteProduct(product.id)}
                     onPress={() => onProductSelected?.(product.id)}
                     onAddToCart={() => addToCart(product.id, 1)}
                     onIncreaseQuantity={() => updateQuantity(product.id, (cartItem?.quantity ?? 0) + 1)}

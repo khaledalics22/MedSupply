@@ -28,7 +28,7 @@ export default function Search({ language, onProductSelected }: SearchProps) {
   const [includeOutOfStock, setIncludeOutOfStock] = useState(false);
   const [sortMode, setSortMode] = useState<'none' | 'priceAsc' | 'priceDesc' | 'discount'>('none');
   const [showFilterMenu, setShowFilterMenu] = useState(false);
-  const { cart, addToCart, updateQuantity } = useAppState();
+  const { cart, addToCart, updateQuantity, favoriteProducts, toggleFavoriteProduct } = useAppState();
 
   useEffect(() => {
     const timeout = setTimeout(() => setDebouncedQuery(query.trim().replace(/\s+/g, ' ')), 250);
@@ -147,10 +147,12 @@ export default function Search({ language, onProductSelected }: SearchProps) {
                 manufacturerName={manufacturerName}
                 cartQuantity={cartItem?.quantity ?? 0}
                 maxQuantity={item.stockQuantity}
+                isFavorite={favoriteProducts.includes(item.id)}
                 onPress={() => onProductSelected?.(item.id)}
                 onAddToCart={() => addToCart(item.id, 1)}
                 onIncreaseQuantity={() => updateQuantity(item.id, (cartItem?.quantity ?? 0) + 1)}
                 onDecreaseQuantity={() => updateQuantity(item.id, (cartItem?.quantity ?? 1) - 1)}
+                onToggleFavorite={() => toggleFavoriteProduct(item.id)}
               />
             </View>
           );

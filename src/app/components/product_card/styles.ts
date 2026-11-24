@@ -112,6 +112,21 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 12,
   },
+  favoriteButton: {
+    position: 'absolute',
+    right: 8,
+    top: 8,
+    zIndex: 10,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E7EEF9',
+    elevation: 2,
+  },
 });
 
 export default styles;

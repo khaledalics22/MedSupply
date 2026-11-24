@@ -11,12 +11,13 @@ type NavBarProps = {
   active: Tab;
   language: LanguageCode;
   onChange: (tab: Tab) => void;
+  onLayoutHeight?: (height: number) => void;
 };
 
 const ACTIVE_COLOR = '#208AEF';
 const INACTIVE_COLOR = '#8E8E93';
 
-export default function NavBar({ active, language, onChange }: NavBarProps) {
+export default function NavBar({ active, language, onChange, onLayoutHeight }: NavBarProps) {
   const tabs: { key: Tab; icon: keyof typeof Ionicons.glyphMap; label: string }[] = [
     { key: 'home', icon: 'home', label: t('home', language) },
     { key: 'search', icon: 'search', label: t('search', language) },
@@ -25,7 +26,10 @@ export default function NavBar({ active, language, onChange }: NavBarProps) {
   ];
 
   return (
-    <SafeAreaView edges={['bottom']} style={styles.container}>
+    <SafeAreaView
+      edges={['bottom']}
+      style={styles.container}
+      onLayout={(event) => onLayoutHeight?.(event.nativeEvent.layout.height)}>
       <View style={styles.row}>
         {tabs.map((tab) => {
           const color = active === tab.key ? ACTIVE_COLOR : INACTIVE_COLOR;

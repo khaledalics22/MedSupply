@@ -22,7 +22,7 @@ export default function FactoryDetailLayout({
   onProductSelected?: (productId: string) => void;
 }) {
   const database = iocContainer.getDatabase();
-  const { cart, addToCart, updateQuantity } = useAppState();
+  const { cart, addToCart, updateQuantity, favoriteProducts, toggleFavoriteProduct } = useAppState();
   const [productQuery, setProductQuery] = useState('');
   const factory = database.getFactoryById(factoryId);
 
@@ -66,6 +66,7 @@ export default function FactoryDetailLayout({
         <View style={styles.listWrap}>
           {products.map((product) => {
             const cartItem = cart.find((entry) => entry.productId === product.id);
+            const isFavorite = favoriteProducts.includes(product.id);
             return (
               <ProductCard
                 key={product.id}
@@ -73,10 +74,12 @@ export default function FactoryDetailLayout({
                 manufacturerName={factory.name}
                 cartQuantity={cartItem?.quantity ?? 0}
                 maxQuantity={product.stockQuantity}
+                isFavorite={isFavorite}
                 onPress={() => onProductSelected?.(product.id)}
                 onAddToCart={() => addToCart(product.id, 1)}
                 onIncreaseQuantity={() => updateQuantity(product.id, (cartItem?.quantity ?? 0) + 1)}
                 onDecreaseQuantity={() => updateQuantity(product.id, (cartItem?.quantity ?? 1) - 1)}
+                onToggleFavorite={() => toggleFavoriteProduct(product.id)}
               />
             );
           })}

@@ -17,7 +17,7 @@ export default function ProductDetailLayout({
   onBack: () => void;
 }) {
   const database = iocContainer.getDatabase();
-  const { cart, addToCart, updateQuantity } = useAppState();
+  const { cart, addToCart, updateQuantity, favoriteProducts, toggleFavoriteProduct } = useAppState();
   const product = database.getProductById(productId);
 
   if (!product) {
@@ -78,9 +78,11 @@ export default function ProductDetailLayout({
           manufacturerName={manufacturerName}
           cartQuantity={cartItem?.quantity ?? 0}
           maxQuantity={product.stockQuantity}
+          isFavorite={favoriteProducts.includes(product.id)}
           onAddToCart={() => addToCart(product.id, 1)}
           onIncreaseQuantity={() => updateQuantity(product.id, (cartItem?.quantity ?? 0) + 1)}
           onDecreaseQuantity={() => updateQuantity(product.id, (cartItem?.quantity ?? 1) - 1)}
+          onToggleFavorite={() => toggleFavoriteProduct(product.id)}
         />
       </ScrollView>
     </View>

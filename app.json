@@ -27,7 +27,17 @@
       }
     },
     "android": {
-      "package": "com.khalidali11.MedSupply"
+      "package": "com.khalidali11.MedSupply",
+      "edgeToEdgeEnabled": false,
+      "androidNavigationBar": {
+        "backgroundColor": "#FFFFFF",
+        "barStyle": "dark-content"
+      },
+      "statusBar": {
+        "backgroundColor": "#208AEF",
+        "barStyle": "light-content",
+        "translucent": false
+      }
     }
   }
 }

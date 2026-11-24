@@ -1,4 +1,5 @@
-import { createContext, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { LanguageCode } from '../i18n';
 import { iocContainer } from '../models/ioc_container';
@@ -33,6 +34,9 @@ type AppStateContextValue = {
     limited: Array<{ productName: string; requested: number; added: number; available: number }>;
     skipped: Array<{ productName: string; reason: string }>;
   };
+  favoriteProducts: string[];
+  toggleFavoriteProduct: (productId: string) => void;
+  isFavoriteProduct: (productId: string) => boolean;
 };
 
 const AppStateContext = createContext<AppStateContextValue | undefined>(undefined);
@@ -50,6 +54,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<NotificationItem[]>(initialNotifications);
   const [favoriteStores, setFavoriteStores] = useState<string[]>(['store-1']);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [favoriteProducts, setFavoriteProducts] = useState<string[]>([]);
   const approvedOrderIds = useRef(new Set<string>());
 
   const addToCart = (productId: string, quantity = 1) => {
@@ -168,6 +173,17 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setFavoriteStores((previous) => previous.includes(storeId) ? previous.filter((id) => id !== storeId) : [...previous, storeId]);
   };
 
+  const toggleFavoriteProduct = (productId: string) => {
+    if (!user?.id) return;
+    setFavoriteProducts((previous) => {
+      const next = previous.includes(productId)
+        ? previous.filter((id) => id !== productId)
+        : [...previous, productId];
+      AsyncStorage.setItem(`medsupply.favorites.products.${user.id}`, JSON.stringify(next));
+      return next;
+    });
+  };
+
   const approveOrder = (orderId: string): { success: boolean; errors: string[] } => {
     const order = orders.find((item) => item.id === orderId);
     if (!order) return { success: false, errors: ['Order not found.'] };
@@ -241,7 +257,19 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     language, setLanguage, cart, addToCart, updateQuantity, removeFromCart,
     cartTotal, cartCount, notifications, unreadNotifications, markNotificationRead,
     orders, createOrder, approveOrder, rejectOrder, favoriteStores, toggleFavoriteStore, reorderOrder,
-  }), [language, cart, cartCount, cartTotal, notifications, unreadNotifications, orders, favoriteStores]);
+    favoriteProducts, toggleFavoriteProduct, isFavoriteProduct: (productId) => favoriteProducts.includes(productId),
+  }), [language, cart, cartCount, cartTotal, notifications, unreadNotifications, orders, favoriteStores, favoriteProducts]);
+
+  useEffect(() => {
+    let active = true;
+    const key = user?.id ? `medsupply.favorites.products.${user.id}` : null;
+    if (!key) { setFavoriteProducts([]); return; }
+    AsyncStorage.getItem(key).then((stored) => {
+      if (!active) return;
+      try { setFavoriteProducts(stored ? JSON.parse(stored) as string[] : []); } catch { setFavoriteProducts([]); }
+    });
+    return () => { active = false; };
+  }, [user?.id]);
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;
 }

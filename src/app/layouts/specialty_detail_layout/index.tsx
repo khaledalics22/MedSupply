@@ -9,7 +9,7 @@ import styles from './styles';
 
 export default function SpecialtyDetailLayout({ specialtyId, language, onBack, onProductSelected }: { specialtyId: string; language: LanguageCode; onBack: () => void; onProductSelected: (productId: string) => void }) {
   const database = iocContainer.getDatabase();
-  const { cart, addToCart, updateQuantity } = useAppState();
+  const { cart, addToCart, updateQuantity, favoriteProducts, toggleFavoriteProduct } = useAppState();
   const specialty = database.getSpecialtyById(specialtyId);
   const products = database.getProductsBySpecialty(specialtyId);
 
@@ -33,10 +33,12 @@ export default function SpecialtyDetailLayout({ specialtyId, language, onBack, o
                 manufacturerName={manufacturerName}
                 cartQuantity={cartItem?.quantity ?? 0}
                 maxQuantity={item.stockQuantity}
+                isFavorite={favoriteProducts.includes(item.id)}
                 onPress={() => onProductSelected(item.id)}
                 onAddToCart={() => addToCart(item.id, 1)}
                 onIncreaseQuantity={() => updateQuantity(item.id, (cartItem?.quantity ?? 0) + 1)}
                 onDecreaseQuantity={() => updateQuantity(item.id, (cartItem?.quantity ?? 1) - 1)}
+                onToggleFavorite={() => toggleFavoriteProduct(item.id)}
               />
             </View>
           );

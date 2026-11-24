@@ -1,4 +1,5 @@
 import { Image, Text, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import type { Product, Store } from '../../utils/types';
 import styles from './styles';
 
@@ -15,6 +16,8 @@ export type ProductCardProps = {
   onAddToCart?: () => void;
   onIncreaseQuantity?: () => void;
   onDecreaseQuantity?: () => void;
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
 };
 
 export default function ProductCard({
@@ -30,6 +33,8 @@ export default function ProductCard({
   onAddToCart,
   onIncreaseQuantity,
   onDecreaseQuantity,
+  isFavorite = false,
+  onToggleFavorite,
 }: ProductCardProps) {
   const consumerPrice = product.consumerPrice;
   const pharmacyPrice = product.pharmacyPriceAfterDiscount;
@@ -39,6 +44,12 @@ export default function ProductCard({
 
   return (
     <View style={styles.container}>
+      {onToggleFavorite ? (
+        <TouchableOpacity style={styles.favoriteButton} onPress={onToggleFavorite} activeOpacity={0.8} accessibilityLabel={isFavorite ? 'Remove from favorites' : 'Add to favorites'}>
+          <Ionicons name={isFavorite ? 'heart' : 'heart-outline'} size={22} color={isFavorite ? '#FF4D67' : '#94A3B8'} />
+        </TouchableOpacity>
+      ) : null}
+
       <TouchableOpacity activeOpacity={0.8} onPress={onPress}>
         <Image source={{ uri: product.image ?? 'https://picsum.photos/seed/product/120' }} style={styles.image} />
         <Text style={styles.name} numberOfLines={1}>{product.name}</Text>

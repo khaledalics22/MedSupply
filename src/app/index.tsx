@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react';
-import { View, TouchableOpacity, Text } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
+import { useEffect, useRef, useState } from 'react';
+import { BackHandler, Keyboard, Platform, ToastAndroid, View, TouchableOpacity, Text } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -43,6 +43,41 @@ import AdminOrderDetailLayout from './layouts/admin_order_detail_layout';
 import AdminProductOverviewLayout from './layouts/admin_product_overview_layout';
 import PharmacistManagementLayout from './layouts/pharmacist_management_layout';
 import PharmacistDetailLayout from './layouts/pharmacist_detail_layout';
+import FavoritesLayout from './layouts/favorites_layout';
+
+function useDoubleBackToExit(resetKey: string) {
+  const pendingExit = useRef(false);
+  const exitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const reset = () => {
+    pendingExit.current = false;
+    if (exitTimer.current) clearTimeout(exitTimer.current);
+    exitTimer.current = null;
+  };
+
+  useEffect(() => {
+    reset();
+  }, [resetKey]);
+
+  useEffect(() => () => {
+    if (exitTimer.current) clearTimeout(exitTimer.current);
+  }, []);
+
+  const handle = () => {
+    if (Platform.OS !== 'android') return false;
+    if (pendingExit.current) {
+      BackHandler.exitApp();
+      return true;
+    }
+
+    pendingExit.current = true;
+    ToastAndroid.show('Press back again to exit', ToastAndroid.SHORT);
+    exitTimer.current = setTimeout(reset, 2000);
+    return true;
+  };
+
+  return handle;
+}
 
 function AppContent() {
   const [tab, setTab] = useState<Tab>('home');
@@ -54,8 +89,22 @@ function AppContent() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
   const [navVisible, setNavVisible] = useState(true);
+  const [showFavorites, setShowFavorites] = useState(false);
+  const [cartOrigin, setCartOrigin] = useState<Tab>('home');
+  const [tabBarHeight, setTabBarHeight] = useState(62);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const insets = useSafeAreaInsets();
   const lastScrollY = useRef(0);
   const { language, setLanguage, cartCount, unreadNotifications } = useAppState();
+
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   const clearSectionState = () => {
     setSelectedItem(null);
@@ -142,23 +191,55 @@ function AppContent() {
 
     const showProfile = tab === 'profile' && !showCart && !showCheckout && !showNotifications && !selectedProductId && !selectedItem && !selectedSpecialtyId && !selectedCategory;
 
-    return showProfile ? <ProfileLayout language={language} onBack={() => setTab('home')} /> : null;
+    return showProfile ? <ProfileLayout language={language} onBack={() => setTab('home')} onFavorites={() => setShowFavorites(true)} /> : null;
   };
 
-  const showTabBar = !showCart && !showNotifications && !showCheckout && !selectedProductId && !selectedItem && !selectedSpecialtyId && !selectedCategory;
-  const showGlobalCart = tab !== 'profile' && !showCart && !showCheckout && !showNotifications;
+  const showTabBar = !showCart && !showNotifications && !showCheckout && !showFavorites && !selectedProductId && !selectedItem && !selectedSpecialtyId && !selectedCategory;
+  const showGlobalCart = tab !== 'profile' && !showFavorites && !showCart && !showCheckout && !showNotifications;
+  const handleDoubleBack = useDoubleBackToExit(`${tab}:${showCart}:${showCheckout}:${showNotifications}:${showFavorites}:${selectedCategory}:${selectedItem?.id}:${selectedSpecialtyId}:${selectedProductId}`);
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (keyboardVisible) {
+        Keyboard.dismiss();
+        return true;
+      }
+      if (showCheckout) {
+        setShowCheckout(false);
+        setShowCart(true);
+        return true;
+      }
+      if (showCart) {
+        setShowCart(false);
+        setTab(cartOrigin);
+        return true;
+      }
+      if (showNotifications) { setShowNotifications(false); return true; }
+      if (showFavorites) { setShowFavorites(false); return true; }
+      if (selectedProductId) { setSelectedProductId(null); return true; }
+      if (selectedSpecialtyId) { setSelectedSpecialtyId(null); return true; }
+      if (selectedItem) { setSelectedItem(null); return true; }
+      if (selectedCategory) { setSelectedCategory(null); setTab('home'); return true; }
+      if (tab !== 'home') { setTab('home'); return true; }
+
+      return handleDoubleBack();
+    });
+
+    return () => subscription.remove();
+  }, [keyboardVisible, tab, cartOrigin, showCart, showCheckout, showNotifications, showFavorites, selectedCategory, selectedItem, selectedSpecialtyId, selectedProductId, handleDoubleBack]);
 
   return (
-    <SafeAreaView edges={['top', 'bottom']} style={styles.container}>
-      <StatusBar style="light" />
+    <SafeAreaView edges={['top']} style={styles.container}>
       <View style={styles.content}>{renderContent()}</View>
-      {showTabBar && <NavBar active={tab} language={language} onChange={(nextTab) => setTab(nextTab)} />}
+      {showTabBar && <NavBar active={tab} language={language} onChange={(nextTab) => setTab(nextTab)} onLayoutHeight={setTabBarHeight} />}
       {showGlobalCart && (
         <TouchableOpacity
           activeOpacity={0.85}
-          onPress={() => setShowCart(true)}
+          onPress={() => { setCartOrigin(tab); setShowCart(true); }}
           accessibilityLabel={`Cart, ${cartCount} items`}
-          style={{ position: 'absolute', right: 18, bottom: showTabBar ? 86 : 18, width: 52, height: 52, borderRadius: 26, backgroundColor: '#208AEF', alignItems: 'center', justifyContent: 'center', zIndex: 20, elevation: 8, shadowColor: '#102A43', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } }}
+          style={{ position: 'absolute', right: 18, bottom: showTabBar ? tabBarHeight + 12 : insets.bottom + 18, width: 52, height: 52, borderRadius: 26, backgroundColor: '#208AEF', alignItems: 'center', justifyContent: 'center', zIndex: 20, elevation: 8, shadowColor: '#102A43', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } }}
         >
           <Ionicons name="cart-outline" size={24} color="#FFFFFF" />
           {cartCount > 0 && <View style={{ position: 'absolute', top: -3, right: -3, minWidth: 20, height: 20, borderRadius: 10, backgroundColor: '#FF5A5F', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}><Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '900' }}>{cartCount}</Text></View>}
@@ -184,7 +265,6 @@ function RoleBasedApp() {
   if (isRestoring) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar style="light" />
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F4F8FF' }}>
           <View />
         </View>
@@ -217,6 +297,29 @@ function AdminApp() {
 
   const openStoreForm = (storeId?: string) => { setEditingStoreId(storeId); setScreen('store-form'); };
   const openManufacturerForm = (factoryId?: string) => { setEditingFactoryId(factoryId); setScreen('manufacturer-form'); };
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (screen === 'dashboard') return true;
+      if (screen === 'store-list') { setScreen('dashboard'); return true; }
+      if (screen === 'store-detail') { setScreen('store-list'); return true; }
+      if (screen === 'store-form') { setScreen(editingStoreId ? 'store-detail' : 'store-list'); return true; }
+      if (screen === 'manufacturer-list') { setScreen('dashboard'); return true; }
+      if (screen === 'manufacturer-detail') { setScreen('manufacturer-list'); return true; }
+      if (screen === 'manufacturer-form') { setScreen(editingFactoryId ? 'manufacturer-detail' : 'manufacturer-list'); return true; }
+      if (screen === 'provider-product-form') { setScreen(providerType === 'store' ? 'store-detail' : 'manufacturer-detail'); return true; }
+      if (screen === 'admin-orders') { setScreen('dashboard'); return true; }
+      if (screen === 'admin-order-detail') { setScreen('admin-orders'); return true; }
+      if (screen === 'product-overview') { setScreen('dashboard'); return true; }
+      if (screen === 'pharmacist-list') { setScreen('dashboard'); return true; }
+      if (screen === 'pharmacist-detail') { setScreen('pharmacist-list'); return true; }
+      return true;
+    });
+
+    return () => subscription.remove();
+  }, [screen, editingStoreId, editingFactoryId, providerType]);
 
   if (screen === 'store-list') {
     return <StoreManagementLayout onBack={() => setScreen('dashboard')} onAddStore={() => openStoreForm()} onStoreSelected={(storeId) => { setSelectedStoreId(storeId); setScreen('store-detail'); }} feedback={storeFeedback} />;
@@ -274,13 +377,8 @@ function AdminApp() {
       onBack={() => setScreen('dashboard')}
       initialStockFilter={productOverviewStockFilter}
       onProductSelected={(product) => {
-        if (product.sellerType === 'store') {
-          setSelectedStoreId(product.sellerId);
-          setScreen('store-detail');
-        } else {
-          setSelectedFactoryId(product.sellerId);
-          setScreen('manufacturer-detail');
-        }
+        if (product.sellerType === 'store') { setSelectedStoreId(product.sellerId); setScreen('store-detail'); }
+        else { setSelectedFactoryId(product.sellerId); setScreen('manufacturer-detail'); }
       }}
     />;
   }
@@ -301,6 +399,6 @@ function AdminApp() {
     onProductOverview={() => { setProductOverviewStockFilter('all'); setScreen('product-overview'); }}
     onLowStockOverview={() => { setProductOverviewStockFilter('low-stock'); setScreen('product-overview'); }}
     onPharmacists={(status) => { setPharmacistInitialStatus(status ?? 'all'); setScreen('pharmacist-list'); }}
-    />;
+  />;
 }
 

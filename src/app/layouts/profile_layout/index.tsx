@@ -19,9 +19,11 @@ import styles from "./styles";
 export default function ProfileLayout({
   language,
   onBack,
+  onFavorites,
 }: {
   language: LanguageCode;
   onBack: () => void;
+  onFavorites: () => void;
 }) {
   const { favoriteStores } = useAppState();
   const { user, logout, updateProfile, changePassword } = useAuthState();
@@ -241,6 +243,19 @@ export default function ProfileLayout({
             <View style={styles.settingText}>
               <Text style={styles.settingTitle}>Change password</Text>
               <Text style={styles.settingMeta}>Update your account password</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.settingRow}
+            onPress={onFavorites}
+          >
+            <View style={styles.settingIcon}>
+              <Ionicons name="heart-outline" size={20} color="#208AEF" />
+            </View>
+            <View style={styles.settingText}>
+              <Text style={styles.settingTitle}>Favorites</Text>
+              <Text style={styles.settingMeta}>View your saved provider products</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
           </TouchableOpacity>
