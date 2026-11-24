@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 export type SupabaseConnectionResult = {
@@ -48,12 +49,33 @@ function createSupabaseClient(): SupabaseClient {
 
   return createClient(parsedUrl.toString().replace(/\/$/, ''), supabaseKey, {
     auth: {
-      persistSession: false,
-      autoRefreshToken: false,
+      persistSession: true,
+      autoRefreshToken: true,
       detectSessionInUrl: false,
+      storage: supabaseStorage,
     },
   });
 }
+
+const memoryStorage = new Map<string, string>();
+
+const supabaseStorage = {
+  async getItem(key: string): Promise<string | null> {
+    const browserStorage = (globalThis as typeof globalThis & { localStorage?: Storage }).localStorage;
+    if (browserStorage) return browserStorage.getItem(key);
+    try { return await AsyncStorage.getItem(key); } catch { return memoryStorage.get(key) ?? null; }
+  },
+  async setItem(key: string, value: string): Promise<void> {
+    const browserStorage = (globalThis as typeof globalThis & { localStorage?: Storage }).localStorage;
+    if (browserStorage) { browserStorage.setItem(key, value); return; }
+    try { await AsyncStorage.setItem(key, value); } catch { memoryStorage.set(key, value); }
+  },
+  async removeItem(key: string): Promise<void> {
+    const browserStorage = (globalThis as typeof globalThis & { localStorage?: Storage }).localStorage;
+    if (browserStorage) { browserStorage.removeItem(key); return; }
+    try { await AsyncStorage.removeItem(key); } catch { memoryStorage.delete(key); }
+  },
+};
 
 export const supabase: SupabaseClient | null = configurationError ? null : createSupabaseClient();
 

@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 
 import type { PasswordChangeInput, ProfileUpdateInput, RegistrationInput, User } from '../models/auth';
 import { authService } from '../models/auth_service';
+import { supabase } from '../../lib/supabase';
 
 type AuthStateContextValue = {
   user: User | null;
@@ -20,10 +21,36 @@ export function AuthStateProvider({ children }: { children: ReactNode }) {
   const [isRestoring, setIsRestoring] = useState(true);
 
   useEffect(() => {
+    let active = true;
+
     authService.restoreSession().then((restored) => {
-      setUser(restored);
-      setIsRestoring(false);
-    }).catch(() => setIsRestoring(false));
+      if (active) {
+        setUser(restored);
+        setIsRestoring(false);
+      }
+    }).catch(() => {
+      if (active) setIsRestoring(false);
+    });
+
+    const subscription = supabase?.auth.onAuthStateChange((event) => {
+      if (!active) return;
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setIsRestoring(false);
+      }
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        authService.restoreSession().then((restored) => {
+          if (active) setUser(restored);
+        }).catch(() => {
+          if (active) setUser(null);
+        });
+      }
+    }).data.subscription;
+
+    return () => {
+      active = false;
+      subscription?.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
