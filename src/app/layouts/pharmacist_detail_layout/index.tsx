@@ -17,6 +17,7 @@ export default function PharmacistDetailLayout({ pharmacistId, onBack }: { pharm
   const [rejectVisible, setRejectVisible] = useState(false);
   const [inactiveVisible, setInactiveVisible] = useState(false);
   const [reason, setReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     authService.getPharmacists().then((items) => setPharmacist(items.find((item) => item.id === pharmacistId) ?? null)).catch((caught) => setError(caught instanceof Error ? caught.message : 'Unable to load pharmacist')).finally(() => setLoading(false));
@@ -30,16 +31,18 @@ export default function PharmacistDetailLayout({ pharmacistId, onBack }: { pharm
   const orderHistory = useMemo(() => orders.filter((order) => order.pharmacistId === pharmacistId), [orders, pharmacistId]);
 
   const approve = async () => {
-    if (!pharmacist || pharmacist.accountStatus !== 'pending') return;
+    if (!pharmacist || pharmacist.accountStatus !== 'pending' || submitting) return;
+    setSubmitting(true);
     setError('');
-    try { await authService.setPharmacistStatus(pharmacist.id, 'active'); await refresh(); setApproveVisible(false); setFeedback('Pharmacist approved successfully.'); } catch (caught) { setError(caught instanceof Error ? caught.message : 'Unable to approve pharmacist.'); }
+    try { await authService.setPharmacistStatus(pharmacist.id, 'active'); await refresh(); setApproveVisible(false); setFeedback('Pharmacist approved successfully.'); } catch (caught) { setError(caught instanceof Error ? caught.message : 'Unable to approve pharmacist.'); } finally { setSubmitting(false); }
   };
 
   const reject = async () => {
-    if (!pharmacist || pharmacist.accountStatus !== 'pending') return;
+    if (!pharmacist || pharmacist.accountStatus !== 'pending' || submitting) return;
     if (!reason.trim()) { setError('A rejection reason is required.'); return; }
+    setSubmitting(true);
     setError('');
-    try { await authService.setPharmacistStatus(pharmacist.id, 'rejected', reason); await refresh(); setRejectVisible(false); setReason(''); setFeedback('Pharmacist rejected successfully.'); } catch (caught) { setError(caught instanceof Error ? caught.message : 'Unable to reject pharmacist.'); }
+    try { await authService.setPharmacistStatus(pharmacist.id, 'rejected', reason); await refresh(); setRejectVisible(false); setReason(''); setFeedback('Pharmacist rejected successfully.'); } catch (caught) { setError(caught instanceof Error ? caught.message : 'Unable to reject pharmacist.'); } finally { setSubmitting(false); }
   };
 
   const deactivate = async () => {

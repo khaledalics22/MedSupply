@@ -24,9 +24,9 @@ function profileToUser(profile: Record<string, unknown>): User {
 async function getAuthorizedProfile(): Promise<User> {
   if (!supabase) throw new Error('Supabase is not configured. Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY.');
 
-  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-  if (sessionError) throw new Error('Unable to restore the Supabase session.');
-  const authUser = sessionData.session?.user;
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError) throw new Error(`Unable to verify the Supabase session (${userError.code ?? 'AUTH_ERROR'}: ${userError.message}).`);
+  const authUser = userData.user;
   if (!authUser) throw new Error('You are not signed in.');
 
   const { data, error } = await supabase
@@ -35,7 +35,7 @@ async function getAuthorizedProfile(): Promise<User> {
     .eq('id', authUser.id)
     .maybeSingle();
 
-  if (error) throw new Error('Unable to retrieve your profile.');
+  if (error) throw new Error(`Unable to retrieve your profile (${error.code ?? 'DB_ERROR'}: ${error.message}).`);
   if (!data) throw new Error('Your profile could not be found. Please contact an administrator.');
 
   const user = profileToUser(data);
@@ -210,27 +210,34 @@ export class AuthService {
 
   async setPharmacistStatus(userId: string, status: 'active' | 'rejected' | 'inactive', reason?: string): Promise<User> {
     if (!supabase) throw new Error('Supabase is not configured.');
+
     const admin = await getAuthorizedProfile();
     if (admin.role !== 'admin') throw new Error('Only an Administrator can change pharmacist status.');
-    if (status === 'rejected' && !reason?.trim()) throw new Error('A rejection reason is required.');
 
-    const { data, error } = await supabase
-      .from('profiles')
-      .update({ account_status: status, rejection_reason: status === 'rejected' ? reason?.trim() : null })
-      .eq('id', userId)
-      .eq('role', 'pharmacist')
-      .select('id,full_name,email,phone,profile_picture,pharmacy_name,pharmacy_address,role,account_status,rejection_reason,created_at')
-      .maybeSingle();
+    let rpcName: 'approve_pharmacist_registration' | 'reject_pharmacist_registration' | 'set_pharmacist_active' | 'set_pharmacist_inactive';
+    const rpcArgs: Record<string, unknown> = { target_profile_id: userId };
+
+    if (status === 'active') {
+      const pharmacists = await this.getPharmacists();
+      const pharmacist = pharmacists.find((item) => item.id === userId);
+      rpcName = pharmacist?.accountStatus === 'pending'
+        ? 'approve_pharmacist_registration'
+        : 'set_pharmacist_active';
+    } else if (status === 'inactive') {
+      rpcName = 'set_pharmacist_inactive';
+    } else {
+      if (!reason?.trim()) throw new Error('A rejection reason is required.');
+      rpcName = 'reject_pharmacist_registration';
+      rpcArgs.rejection_reason = reason.trim();
+    }
+
+    const { error } = await supabase.rpc(rpcName, rpcArgs);
     if (error) throw new Error(error.message);
-    if (!data) throw new Error('Pharmacist not found.');
 
-    await supabase.from('account_decisions').insert({
-      profile_id: userId,
-      status: status === 'active' ? 'approved' : status,
-      reason: status === 'rejected' ? reason?.trim() : null,
-    });
-
-    return profileToUser(data);
+    const items = await this.getPharmacists();
+    const updated = items.find((item) => item.id === userId);
+    if (!updated) throw new Error('Pharmacist status was updated, but the profile could not be refreshed.');
+    return updated;
   }
 }
 

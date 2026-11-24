@@ -27,11 +27,13 @@ export default function PharmacistManagementLayout({ onBack, onSelected, initial
     });
   }, [pharmacists, query, status]);
 
+  const pendingCount = pharmacists.filter((pharmacist) => pharmacist.accountStatus === 'pending').length;
+
   return (
     <View style={styles.container}>
       <View style={styles.header}><TouchableOpacity style={styles.backButton} onPress={onBack}><Ionicons name="arrow-back" size={20} color="#FFFFFF" /></TouchableOpacity><Text style={styles.title}>Pharmacists</Text><View style={styles.headerSpace} /></View>
       <View style={styles.searchRow}><Ionicons name="search" size={20} color="#718096" /><TextInput value={query} onChangeText={setQuery} placeholder="Search name, pharmacy, email or phone" style={styles.searchInput} /></View>
-      <View style={styles.filters}>{(['all', 'pending', 'active', 'rejected', 'inactive'] as const).map((filter) => <TouchableOpacity key={filter} style={[styles.filter, status === filter && styles.filterActive]} onPress={() => setStatus(filter)}><Text style={[styles.filterText, status === filter && styles.filterTextActive]}>{filter}</Text></TouchableOpacity>)}</View>
+      <View style={styles.filters}>{(['all', 'pending', 'active', 'rejected', 'inactive'] as const).map((filter) => <TouchableOpacity key={filter} style={[styles.filter, status === filter && styles.filterActive]} onPress={() => setStatus(filter)}><Text style={[styles.filterText, status === filter && styles.filterTextActive]}>{filter}{filter === 'pending' && pendingCount > 0 && ` (${pendingCount})`}</Text></TouchableOpacity>)}</View>
       {loading ? <Text style={styles.emptyText}>Loading pharmacists...</Text> : error ? <Text style={styles.error}>{error}</Text> : (
         <FlatList
           data={filtered}
