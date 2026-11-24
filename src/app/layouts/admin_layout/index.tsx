@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState } from 'react';
 
 import { iocContainer } from '../../models/ioc_container';
 import { getStockStatus } from '../../models/database';
+import { authService } from '../../models/auth_service';
 import { useAppState } from '../../state/app_state';
 import { useAuthState } from '../../state/auth_state';
 import styles from './styles';
@@ -27,7 +29,7 @@ function SummaryCard({ label, count, icon, color, backgroundColor }: SummaryCard
   );
 }
 
-export default function AdminLayout({ onStoreManagement, onAddStore, onManufacturerManagement, onAddManufacturer, onManageOrders, onProductOverview, onLowStockOverview }: {
+export default function AdminLayout({ onStoreManagement, onAddStore, onManufacturerManagement, onAddManufacturer, onManageOrders, onProductOverview, onLowStockOverview, onPharmacists }: {
   onStoreManagement: () => void;
   onAddStore: () => void;
   onManufacturerManagement: () => void;
@@ -35,10 +37,12 @@ export default function AdminLayout({ onStoreManagement, onAddStore, onManufactu
   onManageOrders: (status?: 'pending' | 'approved' | 'rejected' | 'completed') => void;
   onProductOverview: () => void;
   onLowStockOverview: () => void;
+  onPharmacists: (status?: 'all' | 'pending' | 'active' | 'rejected' | 'inactive') => void;
 }) {
   const { user, logout } = useAuthState();
   const { orders } = useAppState();
   const database = iocContainer.getDatabase();
+  const [pharmacists, setPharmacists] = useState<import('../../models/auth').User[]>([]);
 
   const stores = database.getStores();
   const manufacturers = database.getFactories();
@@ -72,6 +76,17 @@ export default function AdminLayout({ onStoreManagement, onAddStore, onManufactu
     { label: 'Manage Orders', icon: 'receipt-outline' },
   ];
 
+  useEffect(() => {
+    authService.getPharmacists().then(setPharmacists).catch(() => setPharmacists([]));
+  }, []);
+
+  const pharmacistCounts = {
+    total: pharmacists.length,
+    pending: pharmacists.filter((pharmacist) => pharmacist.accountStatus === 'pending').length,
+    active: pharmacists.filter((pharmacist) => pharmacist.accountStatus === 'active').length,
+    inactive: pharmacists.filter((pharmacist) => pharmacist.accountStatus === 'inactive').length,
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -91,6 +106,10 @@ export default function AdminLayout({ onStoreManagement, onAddStore, onManufactu
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.summaryGrid}>
+          <TouchableOpacity style={styles.summaryCardWrapper} onPress={() => onPharmacists('all')} activeOpacity={0.8}><SummaryCard label="Total Pharmacists" count={pharmacistCounts.total} icon="people-outline" color="#208AEF" backgroundColor="#EAF4FF" /></TouchableOpacity>
+          <TouchableOpacity style={styles.summaryCardWrapper} onPress={() => onPharmacists('pending')} activeOpacity={0.8}><SummaryCard label="Pending Pharmacists" count={pharmacistCounts.pending} icon="time-outline" color="#D97706" backgroundColor="#FEF3C7" /></TouchableOpacity>
+          <TouchableOpacity style={styles.summaryCardWrapper} onPress={() => onPharmacists('active')} activeOpacity={0.8}><SummaryCard label="Active Pharmacists" count={pharmacistCounts.active} icon="person-add-outline" color="#16794A" backgroundColor="#DCFCE7" /></TouchableOpacity>
+          <TouchableOpacity style={styles.summaryCardWrapper} onPress={() => onPharmacists('inactive')} activeOpacity={0.8}><SummaryCard label="Inactive Pharmacists" count={pharmacistCounts.inactive} icon="person-remove-outline" color="#64748B" backgroundColor="#F1F5F9" /></TouchableOpacity>
           <TouchableOpacity style={styles.summaryCardWrapper} onPress={onStoreManagement} activeOpacity={0.8}><SummaryCard label="Total Stores" count={stores.length} icon="storefront-outline" color="#208AEF" backgroundColor="#EAF4FF" /></TouchableOpacity>
           <TouchableOpacity style={styles.summaryCardWrapper} onPress={onStoreManagement} activeOpacity={0.8}><SummaryCard label="Active Stores" count={activeStores} icon="checkmark-circle-outline" color="#16794A" backgroundColor="#DCFCE7" /></TouchableOpacity>
           <TouchableOpacity style={styles.summaryCardWrapper} onPress={onManufacturerManagement} activeOpacity={0.8}><SummaryCard label="Total Manufacturers" count={manufacturers.length} icon="business-outline" color="#7C3AED" backgroundColor="#F3E8FF" /></TouchableOpacity>

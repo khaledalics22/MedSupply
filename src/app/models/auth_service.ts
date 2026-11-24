@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import type { AuthAccount, RegistrationInput, User } from './auth';
+import type { AuthAccount, PasswordChangeInput, ProfileUpdateInput, RegistrationInput, User } from './auth';
 
 const ACCOUNTS_KEY = 'medsupply.auth.accounts.v1';
 const SESSION_KEY = 'medsupply.auth.session.v1';
@@ -60,8 +60,12 @@ export class AuthService {
     if (input.password !== input.confirmPassword) throw new Error('Passwords do not match.');
 
     const accounts = await this.getStoredAccounts();
-    if (accounts.some((account) => normalizeEmail(account.user.email) === email)) {
-      throw new Error('An account with this email already exists.');
+    const existing = accounts.find((account) => account.user.role === 'pharmacist' && normalizeEmail(account.user.email) === email);
+    if (existing) {
+      const status = existing.user.accountStatus;
+      if (status === 'pending') throw new Error('A registration with this email is awaiting Admin approval.');
+      if (status === 'active') throw new Error('An active account with this email already exists.');
+      if (status === 'inactive') throw new Error('This account is inactive. Please contact an Admin.');
     }
 
     const user: User = {
@@ -69,6 +73,10 @@ export class AuthService {
       fullName,
       email,
       phone,
+      pharmacyName: input.pharmacyName?.trim() || undefined,
+      pharmacyAddress: input.pharmacyAddress?.trim() || undefined,
+      accountStatus: 'pending',
+      accountDecisions: [],
       role: 'pharmacist',
       createdAt: new Date().toISOString(),
     };
@@ -92,6 +100,14 @@ export class AuthService {
       throw new Error('Invalid email or password.');
     }
 
+    if (account.user.role === 'pharmacist') {
+      const status = account.user.accountStatus ?? 'active';
+      if (status === 'pending') throw new Error('Your registration is awaiting Admin approval.');
+      if (status === 'rejected') throw new Error(account.user.rejectionReason ? `Registration rejected: ${account.user.rejectionReason}` : 'Your registration was rejected.');
+      if (status === 'inactive') throw new Error('This pharmacist account is inactive. Please contact an Admin.');
+      if (status !== 'active') throw new Error('This pharmacist account is not currently active.');
+    }
+
     await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(account.user));
     return account.user;
   }
@@ -103,6 +119,10 @@ export class AuthService {
     try {
       const user = JSON.parse(stored) as User;
       if ((user.role !== 'pharmacist' && user.role !== 'admin') || !user.id) return null;
+      if (user.role === 'pharmacist' && user.accountStatus !== 'active') {
+        await AsyncStorage.removeItem(SESSION_KEY);
+        return null;
+      }
       return user;
     } catch {
       await AsyncStorage.removeItem(SESSION_KEY);
@@ -112,6 +132,97 @@ export class AuthService {
 
   async logout(): Promise<void> {
     await AsyncStorage.removeItem(SESSION_KEY);
+  }
+
+  async updateProfile(userId: string, input: ProfileUpdateInput): Promise<User> {
+    const fullName = input.fullName.trim();
+    const email = normalizeEmail(input.email);
+    const phone = input.phone.trim();
+    const pharmacyName = input.pharmacyName.trim();
+    const pharmacyAddress = input.pharmacyAddress.trim();
+
+    if (!fullName || !email || !phone || !pharmacyName || !pharmacyAddress) throw new Error('Please complete all required profile fields.');
+    if (!/^\S+@\S+\.\S+$/.test(email)) throw new Error('Please enter a valid email address.');
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length < 7 || digits.length > 15) throw new Error('Please enter a valid phone number.');
+
+    const accounts = await this.getStoredAccounts();
+    if (accounts.some((account) => account.user.id !== userId && normalizeEmail(account.user.email) === email)) throw new Error('This email is already used by another account.');
+
+    const accountIndex = accounts.findIndex((account) => account.user.id === userId);
+    if (accountIndex < 0) throw new Error('Account not found.');
+
+    const updatedUser: User = {
+      ...accounts[accountIndex].user,
+      fullName,
+      email,
+      phone,
+      profilePicture: input.profilePicture?.trim() || undefined,
+      pharmacyName,
+      pharmacyAddress,
+    };
+
+    const updatedAccounts = accounts.map((account) => account.user.id === userId ? { ...account, user: updatedUser } : account);
+    await AsyncStorage.setItem(ACCOUNTS_KEY, JSON.stringify(updatedAccounts));
+
+    const session = await AsyncStorage.getItem(SESSION_KEY);
+    if (session) await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(updatedUser));
+    return updatedUser;
+  }
+
+  async changePassword(userId: string, input: PasswordChangeInput): Promise<void> {
+    if (!input.currentPassword || !input.newPassword || !input.confirmPassword) throw new Error('Please complete all password fields.');
+    if (!/^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(input.newPassword)) throw new Error('New password must be at least 8 characters and include a letter and number.');
+    if (input.newPassword !== input.confirmPassword) throw new Error('New passwords do not match.');
+
+    const accounts = await this.getStoredAccounts();
+    const account = accounts.find((item) => item.user.id === userId);
+    if (!account) throw new Error('Account not found.');
+    if (account.passwordHash !== mockHash(input.currentPassword)) throw new Error('The current password is incorrect.');
+
+    const updatedAccounts = accounts.map((item) => item.user.id === userId ? { ...item, passwordHash: mockHash(input.newPassword) } : item);
+    await AsyncStorage.setItem(ACCOUNTS_KEY, JSON.stringify(updatedAccounts));
+  }
+
+  async getPharmacists(): Promise<User[]> {
+    const accounts = await this.getStoredAccounts();
+    return accounts.filter((account) => account.user.role === 'pharmacist').map((account) => account.user);
+  }
+
+  async setPharmacistStatus(userId: string, status: 'active' | 'rejected' | 'inactive', reason?: string): Promise<User> {
+    const accounts = await this.getStoredAccounts();
+    const index = accounts.findIndex((account) => account.user.id === userId && account.user.role === 'pharmacist');
+    if (index < 0) throw new Error('Pharmacist account not found.');
+
+    const current = accounts[index].user;
+    if (current.accountStatus === 'pending' && status !== 'active' && status !== 'rejected') throw new Error('Invalid status transition.');
+    if (status === 'rejected' && !reason?.trim()) throw new Error('A rejection reason is required.');
+
+    const decisionStatus = status === 'active'
+      ? (current.accountStatus === 'inactive' ? 'reactivated' : 'approved')
+      : status;
+
+    const updatedUser: User = {
+      ...current,
+      accountStatus: status,
+      rejectionReason: status === 'rejected' ? reason?.trim() : undefined,
+      accountDecisions: [
+        ...(current.accountDecisions ?? []),
+        { status: decisionStatus, reason: status === 'rejected' ? reason?.trim() : undefined, decidedAt: new Date().toISOString() },
+      ],
+    };
+
+    const updatedAccounts = accounts.map((account) => account.user.id === userId ? { ...account, user: updatedUser } : account);
+    await AsyncStorage.setItem(ACCOUNTS_KEY, JSON.stringify(updatedAccounts));
+
+    const storedSession = await AsyncStorage.getItem(SESSION_KEY);
+    if (storedSession) {
+      try {
+        const sessionUser = JSON.parse(storedSession) as User;
+        if (sessionUser.id === userId) await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(updatedUser));
+      } catch {}
+    }
+    return updatedUser;
   }
 }
 

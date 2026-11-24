@@ -11,6 +11,8 @@ export default function AuthLayout() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [pharmacyName, setPharmacyName] = useState('');
+  const [pharmacyAddress, setPharmacyAddress] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -31,7 +33,7 @@ export default function AuthLayout() {
     resetFeedback();
     const validation = mode === 'login'
       ? validateLogin()
-      : (!fullName.trim() || !email.trim() || !phone.trim() || !password || !confirmPassword
+      : (!fullName.trim() || !email.trim() || !phone.trim() || !pharmacyName.trim() || !pharmacyAddress.trim() || !password || !confirmPassword
         ? 'Please complete all required fields.'
         : !/^\S+@\S+\.\S+$/.test(email.trim())
           ? 'Please enter a valid email address.'
@@ -46,8 +48,8 @@ export default function AuthLayout() {
       if (mode === 'login') {
         await login(email, password);
       } else {
-        await register({ fullName, email, phone, password, confirmPassword });
-        setSuccess('Account created successfully. Welcome to MedSupply!');
+        await register({ fullName, email, phone, password, confirmPassword, pharmacyName, pharmacyAddress });
+        setSuccess('Registration submitted successfully. Your account is awaiting Admin approval.');
       }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Authentication failed. Please try again.');
@@ -97,6 +99,20 @@ export default function AuthLayout() {
             <View style={styles.fieldWrap}>
               <Text style={styles.label}>Phone number</Text>
               <View style={styles.inputRow}><TextInput value={phone} onChangeText={setPhone} placeholder="+20 100 000 0000" style={styles.input} keyboardType="phone-pad" /></View>
+            </View>
+          ) : null}
+
+          {mode === 'register' ? (
+            <View style={styles.fieldWrap}>
+              <Text style={styles.label}>Pharmacy name</Text>
+              <View style={styles.inputRow}><TextInput value={pharmacyName} onChangeText={setPharmacyName} placeholder="Al-Ahrar Pharmacy" style={styles.input} autoCapitalize="words" /></View>
+            </View>
+          ) : null}
+
+          {mode === 'register' ? (
+            <View style={styles.fieldWrap}>
+              <Text style={styles.label}>Pharmacy address</Text>
+              <View style={styles.inputRow}><TextInput value={pharmacyAddress} onChangeText={setPharmacyAddress} placeholder="123 Main St, Heliopolis" style={styles.input} autoCapitalize="words" /></View>
             </View>
           ) : null}
 

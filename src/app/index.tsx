@@ -41,6 +41,8 @@ import { CategoryType, Item, ItemType } from './utils/types';
 import AdminOrdersLayout from './layouts/admin_orders_layout';
 import AdminOrderDetailLayout from './layouts/admin_order_detail_layout';
 import AdminProductOverviewLayout from './layouts/admin_product_overview_layout';
+import PharmacistManagementLayout from './layouts/pharmacist_management_layout';
+import PharmacistDetailLayout from './layouts/pharmacist_detail_layout';
 
 function AppContent() {
   const [tab, setTab] = useState<Tab>('home');
@@ -197,7 +199,7 @@ function RoleBasedApp() {
 }
 
 function AdminApp() {
-  const [screen, setScreen] = useState<'dashboard' | 'store-list' | 'store-form' | 'store-detail' | 'manufacturer-list' | 'manufacturer-form' | 'manufacturer-detail' | 'provider-product-form' | 'admin-orders' | 'admin-order-detail' | 'product-overview'>('dashboard');
+  const [screen, setScreen] = useState<'dashboard' | 'store-list' | 'store-form' | 'store-detail' | 'manufacturer-list' | 'manufacturer-form' | 'manufacturer-detail' | 'provider-product-form' | 'admin-orders' | 'admin-order-detail' | 'product-overview' | 'pharmacist-list' | 'pharmacist-detail'>('dashboard');
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
   const [editingStoreId, setEditingStoreId] = useState<string | undefined>(undefined);
   const [selectedFactoryId, setSelectedFactoryId] = useState<string | null>(null);
@@ -210,6 +212,8 @@ function AdminApp() {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [productOverviewStockFilter, setProductOverviewStockFilter] = useState<'all' | 'available' | 'low-stock' | 'out-of-stock'>('all');
   const [adminOrdersInitialStatus, setAdminOrdersInitialStatus] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'completed'>('all');
+  const [selectedPharmacistId, setSelectedPharmacistId] = useState<string | null>(null);
+  const [pharmacistInitialStatus, setPharmacistInitialStatus] = useState<'all' | 'pending' | 'active' | 'rejected' | 'inactive'>('all');
 
   const openStoreForm = (storeId?: string) => { setEditingStoreId(storeId); setScreen('store-form'); };
   const openManufacturerForm = (factoryId?: string) => { setEditingFactoryId(factoryId); setScreen('manufacturer-form'); };
@@ -281,6 +285,13 @@ function AdminApp() {
     />;
   }
 
+  if (screen === 'pharmacist-list') {
+    return <PharmacistManagementLayout initialStatus={pharmacistInitialStatus} onBack={() => setScreen('dashboard')} onSelected={(pharmacistId) => { setSelectedPharmacistId(pharmacistId); setScreen('pharmacist-detail'); }} />;
+  }
+  if (screen === 'pharmacist-detail' && selectedPharmacistId) {
+    return <PharmacistDetailLayout pharmacistId={selectedPharmacistId} onBack={() => setScreen('pharmacist-list')} />;
+  }
+
   return <AdminLayout
     onStoreManagement={() => setScreen('store-list')}
     onAddStore={() => openStoreForm()}
@@ -289,6 +300,7 @@ function AdminApp() {
     onManageOrders={(status) => { setAdminOrdersInitialStatus(status ?? 'all'); setScreen('admin-orders'); }}
     onProductOverview={() => { setProductOverviewStockFilter('all'); setScreen('product-overview'); }}
     onLowStockOverview={() => { setProductOverviewStockFilter('low-stock'); setScreen('product-overview'); }}
-  />;
+    onPharmacists={(status) => { setPharmacistInitialStatus(status ?? 'all'); setScreen('pharmacist-list'); }}
+    />;
 }
 
