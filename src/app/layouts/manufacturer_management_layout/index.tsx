@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import type { Factory } from '../../models/data_types';
@@ -10,7 +10,20 @@ export default function ManufacturerManagementLayout({ onBack, onAdd, onSelected
   const database = iocContainer.getDatabase();
   const [query, setQuery] = useState('');
   const [, refresh] = useState(0);
-  const manufacturers = database.getFactories().filter((factory) => factory.name.toLowerCase().includes(query.trim().toLowerCase()));
+  const [manufacturers, setManufacturers] = useState<Factory[]>(database.getFactories());
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    iocContainer.getDatabase().getFactoriesAsync(true)
+      .then((items) => { if (active) setManufacturers(items); })
+      .catch((caught) => { if (active) setError(caught instanceof Error ? caught.message : 'Unable to load manufacturers'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [refresh]);
+
+  const filteredManufacturers = manufacturers.filter((factory) => factory.name.toLowerCase().includes(query.trim().toLowerCase()));
 
   return (
     <View style={styles.container}>
@@ -21,11 +34,11 @@ export default function ManufacturerManagementLayout({ onBack, onAdd, onSelected
       </View>
       {feedback ? <Text style={styles.feedback}>{feedback}</Text> : null}
       <View style={styles.searchRow}><Ionicons name="search" size={20} color="#718096" /><TextInput value={query} onChangeText={setQuery} placeholder="Search manufacturers by name" style={styles.searchInput} /></View>
-      {manufacturers.length === 0 ? (
+      {loading ? <Text style={styles.emptyText}>Loading manufacturers...</Text> : error ? <Text style={styles.emptyText}>{error}</Text> : filteredManufacturers.length === 0 ? (
         <View style={styles.emptyState}><Ionicons name="business-outline" size={38} color="#94A3B8" /><Text style={styles.emptyTitle}>No manufacturers found</Text><Text style={styles.emptyText}>Add a manufacturer to expand the marketplace.</Text></View>
       ) : (
         <FlatList
-          data={manufacturers}
+          data={filteredManufacturers}
           extraData={refresh}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}

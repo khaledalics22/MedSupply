@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { iocContainer } from '../../models/ioc_container';
@@ -10,7 +10,8 @@ import styles from './styles';
 export default function AdminStoreDetailLayout({ storeId, onBack, onEdit, onAddProduct, onEditProduct }: { storeId: string; onBack: () => void; onEdit: (storeId: string) => void; onAddProduct: () => void; onEditProduct: (product: Product) => void }) {
   const database = iocContainer.getDatabase();
   const [, refresh] = useState(0);
-  const store = database.getStoreById(storeId);
+  const [store, setStore] = useState(database.getStoreById(storeId));
+  const [loading, setLoading] = useState(true);
   const products = useMemo(() => database.getProductsByStore(storeId), [database, storeId, refresh]);
   const [confirmStatus, setConfirmStatus] = useState(false);
   const [feedback, setFeedback] = useState('');
@@ -18,16 +19,36 @@ export default function AdminStoreDetailLayout({ storeId, onBack, onEdit, onAddP
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [stockStatusFilter, setStockStatusFilter] = useState<'all' | 'available' | 'low-stock' | 'out-of-stock'>('all');
 
+  useEffect(() => {
+    let active = true;
+    iocContainer.getDatabase().getStoreByIdAsync(storeId)
+      .then((item) => { if (active) setStore(item); })
+      .catch((caught) => setFeedback(caught instanceof Error ? caught.message : 'Unable to load store'))
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [storeId, refresh]);
+
+  if (loading) {
+    return <View style={styles.container}><View style={styles.header}><TouchableOpacity style={styles.backButton} onPress={onBack}><Ionicons name="arrow-back" size={20} color="#FFFFFF" /></TouchableOpacity><Text style={styles.title}>Loading store...</Text></View></View>;
+  }
+
   if (!store) {
     return <View style={styles.container}><View style={styles.header}><TouchableOpacity style={styles.backButton} onPress={onBack}><Ionicons name="arrow-back" size={20} color="#FFFFFF" /></TouchableOpacity><Text style={styles.title}>Store not found</Text></View></View>;
   }
 
-  const changeStatus = () => {
+  const changeStatus = async () => {
+    if (!store) return;
     const nextStatus = store.status === 'active' ? 'inactive' : 'active';
-    database.setStoreStatus(store.id, nextStatus);
-    setConfirmStatus(false);
-    setFeedback(`Store ${nextStatus === 'active' ? 'activated' : 'deactivated'} successfully.`);
-    refresh((value) => value + 1);
+    try {
+      const updated = await iocContainer.getDatabase().setStoreStatusAsync(store.id, nextStatus);
+      setStore(updated);
+      setConfirmStatus(false);
+      setFeedback(`Store ${nextStatus === 'active' ? 'activated' : 'deactivated'} successfully.`);
+      refresh((value) => value + 1);
+    } catch (caught) {
+      setConfirmStatus(false);
+      setFeedback(caught instanceof Error ? caught.message : 'Unable to update store status.');
+    }
   };
 
   return (

@@ -46,6 +46,20 @@ export abstract class Database {
   abstract findProviderProductDuplicate(providerType: ProducerType, providerId: string, name: string, dosage: string, excludeProductId?: string): Product | undefined;
   abstract validateOrderStock(lines: OrderLineSnapshot[]): string[];
   abstract approveAndDeductOrderStock(lines: OrderLineSnapshot[]): { success: boolean; errors: string[] };
+
+  abstract getStoresAsync(includeInactive?: boolean): Promise<Store[]>;
+  abstract getActiveStoresAsync(): Promise<Store[]>;
+  abstract getStoreByIdAsync(storeId: string): Promise<Store | undefined>;
+  abstract addStoreAsync(input: StoreInput): Promise<Store>;
+  abstract updateStoreAsync(storeId: string, input: StoreInput): Promise<Store>;
+  abstract setStoreStatusAsync(storeId: string, status: 'active' | 'inactive'): Promise<Store>;
+
+  abstract getFactoriesAsync(includeInactive?: boolean): Promise<Factory[]>;
+  abstract getActiveFactoriesAsync(): Promise<Factory[]>;
+  abstract getFactoryByIdAsync(factoryId: string): Promise<Factory | undefined>;
+  abstract addFactoryAsync(input: ManufacturerInput): Promise<Factory>;
+  abstract updateFactoryAsync(factoryId: string, input: ManufacturerInput): Promise<Factory>;
+  abstract setFactoryStatusAsync(factoryId: string, status: 'active' | 'inactive'): Promise<Factory>;
 }
 
 export class MockDatabase extends Database {
@@ -410,6 +424,50 @@ export class MockDatabase extends Database {
 
     for (const [productId, quantity] of Object.entries(quantities)) this.deductProductStock(productId, quantity);
     return { success: true, errors: [] };
+  }
+
+  // Async methods
+  async getStoresAsync(includeInactive?: boolean): Promise<Store[]> {
+    return includeInactive ? [...this.stores] : this.stores.filter((store) => store.status === 'active');
+  }
+  async getActiveStoresAsync(): Promise<Store[]> {
+    return this.stores.filter((store) => store.status === 'active');
+  }
+  async getStoreByIdAsync(storeId: string): Promise<Store | undefined> {
+    return this.stores.find((store) => store.id === storeId);
+  }
+  async addStoreAsync(input: StoreInput): Promise<Store> {
+    const store = this.addStore(input);
+    return new Promise((resolve) => setTimeout(() => resolve(store), 100));
+  }
+  async updateStoreAsync(storeId: string, input: StoreInput): Promise<Store> {
+    const store = this.updateStore(storeId, input);
+    return new Promise((resolve) => setTimeout(() => resolve(store), 100));
+  }
+  async setStoreStatusAsync(storeId: string, status: 'active' | 'inactive'): Promise<Store> {
+    const store = this.setStoreStatus(storeId, status);
+    return new Promise((resolve) => setTimeout(() => resolve(store), 100));
+  }
+  async getFactoriesAsync(includeInactive?: boolean): Promise<Factory[]> {
+    return includeInactive ? [...this.factories] : this.factories.filter((factory) => factory.status === 'active');
+  }
+  async getActiveFactoriesAsync(): Promise<Factory[]> {
+    return this.factories.filter((factory) => factory.status === 'active');
+  }
+  async getFactoryByIdAsync(factoryId: string): Promise<Factory | undefined> {
+    return this.factories.find((factory) => factory.id === factoryId);
+  }
+  async addFactoryAsync(input: ManufacturerInput): Promise<Factory> {
+    const factory = this.addFactory(input);
+    return new Promise((resolve) => setTimeout(() => resolve(factory), 100));
+  }
+  async updateFactoryAsync(factoryId: string, input: ManufacturerInput): Promise<Factory> {
+    const factory = this.updateFactory(factoryId, input);
+    return new Promise((resolve) => setTimeout(() => resolve(factory), 100));
+  }
+  async setFactoryStatusAsync(factoryId: string, status: 'active' | 'inactive'): Promise<Factory> {
+    const factory = this.setFactoryStatus(factoryId, status);
+    return new Promise((resolve) => setTimeout(() => resolve(factory), 100));
   }
 }
 

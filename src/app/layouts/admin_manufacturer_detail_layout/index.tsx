@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { iocContainer } from '../../models/ioc_container';
@@ -10,7 +10,8 @@ import styles from './styles';
 export default function AdminManufacturerDetailLayout({ factoryId, onBack, onEdit, onAddProduct, onEditProduct }: { factoryId: string; onBack: () => void; onEdit: (factoryId: string) => void; onAddProduct: () => void; onEditProduct: (product: Product) => void }) {
   const database = iocContainer.getDatabase();
   const [, refresh] = useState(0);
-  const factory = database.getFactoryById(factoryId);
+  const [factory, setFactory] = useState(database.getFactoryById(factoryId));
+  const [loading, setLoading] = useState(true);
   const products = useMemo(() => database.getProductsByManufacturer(factoryId), [database, factoryId, refresh]);
   const [confirmStatus, setConfirmStatus] = useState(false);
   const [feedback, setFeedback] = useState('');
@@ -18,12 +19,31 @@ export default function AdminManufacturerDetailLayout({ factoryId, onBack, onEdi
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [stockStatusFilter, setStockStatusFilter] = useState<'all' | 'available' | 'low-stock' | 'out-of-stock'>('all');
 
+  useEffect(() => {
+    let active = true;
+    iocContainer.getDatabase().getFactoryByIdAsync(factoryId)
+      .then((item) => { if (active) setFactory(item); })
+      .catch((caught) => setFeedback(caught instanceof Error ? caught.message : 'Unable to load manufacturer'))
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [factoryId, refresh]);
+
+  if (loading) return <View style={styles.container}><View style={styles.header}><TouchableOpacity style={styles.backButton} onPress={onBack}><Ionicons name="arrow-back" size={20} color="#FFFFFF" /></TouchableOpacity><Text style={styles.title}>Loading manufacturer...</Text></View></View>;
   if (!factory) return <View style={styles.container}><View style={styles.header}><TouchableOpacity style={styles.backButton} onPress={onBack}><Ionicons name="arrow-back" size={20} color="#FFFFFF" /></TouchableOpacity><Text style={styles.title}>Manufacturer not found</Text></View></View>;
 
-  const changeStatus = () => {
+  const changeStatus = async () => {
+    if (!factory) return;
     const nextStatus = factory.status === 'active' ? 'inactive' : 'active';
-    database.setFactoryStatus(factory.id, nextStatus);
-    setConfirmStatus(false); setFeedback(`Manufacturer ${nextStatus === 'active' ? 'activated' : 'deactivated'} successfully.`); refresh((value) => value + 1);
+    try {
+      const updated = await iocContainer.getDatabase().setFactoryStatusAsync(factory.id, nextStatus);
+      setFactory(updated);
+      setConfirmStatus(false);
+      setFeedback(`Manufacturer ${nextStatus === 'active' ? 'activated' : 'deactivated'} successfully.`);
+      refresh((value) => value + 1);
+    } catch (caught) {
+      setConfirmStatus(false);
+      setFeedback(caught instanceof Error ? caught.message : 'Unable to update manufacturer status.');
+    }
   };
 
   const address = typeof factory.location === 'string' ? factory.location : factory.address ?? 'Address unavailable';

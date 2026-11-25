@@ -17,6 +17,7 @@ export default function ManufacturerFormLayout({ factory, onBack, onSaved }: { f
   const [status, setStatus] = useState<ManufacturerStatus>(factory?.status ?? 'active');
   const [error, setError] = useState('');
   const [confirmSave, setConfirmSave] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const validate = () => {
     if (!name.trim() || !contactPerson.trim() || !phone.trim() || !address.trim()) return 'Please complete all required fields.';
@@ -25,14 +26,25 @@ export default function ManufacturerFormLayout({ factory, onBack, onSaved }: { f
     return '';
   };
 
-  const save = () => {
+  const save = async () => {
     const validation = validate();
     if (validation) { setError(validation); return; }
+    if (saving) return;
+
+    setSaving(true);
+    setError('');
     const input: ManufacturerInput = { name, contactPerson, phone, address, description, image, status };
-    if (factory) database.updateFactory(factory.id, input);
-    else database.addFactory(input);
-    setConfirmSave(false);
-    onSaved(factory ? 'Manufacturer updated successfully.' : 'Manufacturer added successfully.');
+    try {
+      if (factory) await iocContainer.getDatabase().updateFactoryAsync(factory.id, input);
+      else await iocContainer.getDatabase().addFactoryAsync(input);
+      setConfirmSave(false);
+      onSaved(factory ? 'Manufacturer updated successfully.' : 'Manufacturer added successfully.');
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Unable to save manufacturer.');
+      setConfirmSave(false);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -55,7 +67,9 @@ export default function ManufacturerFormLayout({ factory, onBack, onSaved }: { f
             </TouchableOpacity>
           ))}
         </View>
-        <TouchableOpacity style={styles.saveButton} onPress={() => { const validation = validate(); if (validation) setError(validation); else setConfirmSave(true); }}><Text style={styles.saveText}>{factory ? 'Save Changes' : 'Add Manufacturer'}</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.saveButton} onPress={() => { const validation = validate(); if (validation) setError(validation); else setConfirmSave(true); }} disabled={saving}>
+          <Text style={styles.saveText}>{saving ? 'Saving...' : factory ? 'Save Changes' : 'Add Manufacturer'}</Text>
+        </TouchableOpacity>
       </ScrollView>
       <Modal visible={confirmSave} transparent animationType="fade" onRequestClose={() => setConfirmSave(false)}>
         <View style={styles.modalBackdrop}><View style={styles.modalCard}><Text style={styles.modalTitle}>{factory ? 'Save manufacturer changes?' : 'Add this manufacturer?'}</Text><Text style={styles.modalText}>Please confirm the manufacturer information before saving.</Text><View style={styles.modalActions}><TouchableOpacity style={styles.cancelButton} onPress={() => setConfirmSave(false)}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity><TouchableOpacity style={styles.confirmButton} onPress={save}><Text style={styles.confirmText}>Confirm</Text></TouchableOpacity></View></View></View>

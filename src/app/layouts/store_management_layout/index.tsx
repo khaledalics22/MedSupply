@@ -1,16 +1,29 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import type { Store } from '../../models/data_types';
 import { iocContainer } from '../../models/ioc_container';
 import styles from './styles';
 
-export default function StoreManagementLayout({ onBack, onAddStore, onStoreSelected, feedback }: { onBack: () => void; onAddStore: () => void; onStoreSelected: (storeId: string) => void; feedback?: string }) {
+export default function StoreManagementLayout({ refreshToken = 0, onBack, onAddStore, onStoreSelected, feedback }: { refreshToken?: number; onBack: () => void; onAddStore: () => void; onStoreSelected: (storeId: string) => void; feedback?: string }) {
   const database = iocContainer.getDatabase();
   const [query, setQuery] = useState('');
   const [version, setVersion] = useState(0);
-  const stores = database.getStores().filter((store) => store.name.toLowerCase().includes(query.trim().toLowerCase()));
+  const [stores, setStores] = useState<Store[]>(database.getStores());
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    iocContainer.getDatabase().getStoresAsync(true)
+      .then((items) => { if (active) setStores(items); })
+      .catch((caught) => { if (active) setError(caught instanceof Error ? caught.message : 'Unable to load stores'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [version, refreshToken]);
+
+  const filteredStores = stores.filter((store) => store.name.toLowerCase().includes(query.trim().toLowerCase()));
 
   return (
     <View style={styles.container}>
@@ -23,11 +36,11 @@ export default function StoreManagementLayout({ onBack, onAddStore, onStoreSelec
         <Ionicons name="search" size={20} color="#718096" />
         <TextInput value={query} onChangeText={setQuery} placeholder="Search stores by name" style={styles.searchInput} />
       </View>
-      {stores.length === 0 ? (
+      {loading ? <Text style={styles.emptyText}>Loading stores...</Text> : error ? <Text style={styles.emptyText}>{error}</Text> : filteredStores.length === 0 ?
         <View style={styles.emptyState}><Ionicons name="storefront-outline" size={38} color="#94A3B8" /><Text style={styles.emptyTitle}>No stores found</Text><Text style={styles.emptyText}>Add a store to start building the marketplace.</Text></View>
-      ) : (
+        :
         <FlatList
-          data={stores}
+          data={filteredStores}
           extraData={version}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
@@ -47,7 +60,7 @@ export default function StoreManagementLayout({ onBack, onAddStore, onStoreSelec
             </TouchableOpacity>
           )}
         />
-      )}
+      }
       {feedback ? <Text style={styles.feedback}>{feedback}</Text> : null}
     </View>
   );

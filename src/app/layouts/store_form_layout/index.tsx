@@ -17,6 +17,7 @@ export default function StoreFormLayout({ store, onBack, onSaved }: { store?: St
   const [status, setStatus] = useState<StoreStatus>(store?.status ?? 'active');
   const [error, setError] = useState('');
   const [confirmSave, setConfirmSave] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const validate = () => {
     if (!name.trim() || !contactPerson.trim() || !phone.trim() || !address.trim()) return 'Please complete all required fields.';
@@ -25,14 +26,25 @@ export default function StoreFormLayout({ store, onBack, onSaved }: { store?: St
     return '';
   };
 
-  const save = () => {
+  const save = async () => {
     const validation = validate();
     if (validation) { setError(validation); return; }
-    setConfirmSave(false);
+    if (saving) return;
+
+    setSaving(true);
+    setError('');
     const input: StoreInput = { name, contactPerson, phone, address, description, image, status };
-    if (store) database.updateStore(store.id, input);
-    else database.addStore(input);
-    onSaved(store ? 'Store updated successfully.' : 'Store added successfully.');
+    try {
+      if (store) await iocContainer.getDatabase().updateStoreAsync(store.id, input);
+      else await iocContainer.getDatabase().addStoreAsync(input);
+      setConfirmSave(false);
+      onSaved(store ? 'Store updated successfully.' : 'Store added successfully.');
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Unable to save store.');
+      setConfirmSave(false);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

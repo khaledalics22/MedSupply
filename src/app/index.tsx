@@ -294,6 +294,7 @@ function AdminApp() {
   const [adminOrdersInitialStatus, setAdminOrdersInitialStatus] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'completed'>('all');
   const [selectedPharmacistId, setSelectedPharmacistId] = useState<string | null>(null);
   const [pharmacistInitialStatus, setPharmacistInitialStatus] = useState<'all' | 'pending' | 'active' | 'rejected' | 'inactive'>('all');
+  const [storeListRefresh, setStoreListRefresh] = useState(0);
 
   const openStoreForm = (storeId?: string) => { setEditingStoreId(storeId); setScreen('store-form'); };
   const openManufacturerForm = (factoryId?: string) => { setEditingFactoryId(factoryId); setScreen('manufacturer-form'); };
@@ -322,7 +323,7 @@ function AdminApp() {
   }, [screen, editingStoreId, editingFactoryId, providerType]);
 
   if (screen === 'store-list') {
-    return <StoreManagementLayout onBack={() => setScreen('dashboard')} onAddStore={() => openStoreForm()} onStoreSelected={(storeId) => { setSelectedStoreId(storeId); setScreen('store-detail'); }} feedback={storeFeedback} />;
+    return <StoreManagementLayout refreshToken={storeListRefresh} onBack={() => setScreen('dashboard')} onAddStore={() => openStoreForm()} onStoreSelected={(storeId) => { setSelectedStoreId(storeId); setScreen('store-detail'); }} feedback={storeFeedback} />;
   }
   if (screen === 'store-detail' && selectedStoreId) {
     return <AdminStoreDetailLayout
@@ -335,7 +336,7 @@ function AdminApp() {
   }
   if (screen === 'store-form') {
     const store = editingStoreId ? iocContainer.getDatabase().getStoreById(editingStoreId) : undefined;
-    return <StoreFormLayout store={store} onBack={() => setScreen(editingStoreId ? 'store-detail' : 'store-list')} onSaved={(message) => { setStoreFeedback(message); setEditingStoreId(undefined); setScreen('store-list'); }} />;
+    return <StoreFormLayout store={store} onBack={() => setScreen(editingStoreId ? 'store-detail' : 'store-list')} onSaved={(message) => { setStoreFeedback(message); setStoreListRefresh((value) => value + 1); setEditingStoreId(undefined); setScreen('store-list'); }} />;
   }
 
   if (screen === 'manufacturer-list') {
