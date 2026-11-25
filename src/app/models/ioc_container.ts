@@ -30,6 +30,7 @@ class ProviderAwareDatabase extends Database {
 
   getAdvertisements() { return this.mock.getAdvertisements(); }
   getSpecialties() { return this.mock.getSpecialties(); }
+  getSpecialtiesAsync() { return this.supabaseProviders.getSpecialties(); }
   getSpecialtyById(id: string) { return this.mock.getSpecialtyById(id); }
   getProducts() { return this.mock.getProducts(); }
   getAvailableProducts() { return this.mock.getAvailableProducts(); }
@@ -60,6 +61,15 @@ class ProviderAwareDatabase extends Database {
   findProviderProductDuplicate(providerType: any, providerId: string, name: string, dosage: string, excludeProductId?: string) { return this.mock.findProviderProductDuplicate(providerType, providerId, name, dosage, excludeProductId); }
   validateOrderStock(lines: any[]) { return this.mock.validateOrderStock(lines); }
   approveAndDeductOrderStock(lines: any[]) { return this.mock.approveAndDeductOrderStock(lines); }
+
+  getProductsByStoreAsync(storeId: string) { return this.supabaseProviders.getProductsByStore(storeId); }
+  getProductsByManufacturerAsync(manufacturerId: string) { return this.supabaseProviders.getProductsByManufacturer(manufacturerId); }
+  getProductByIdAsync(productId: string) { return this.supabaseProviders.getProductById(productId); }
+  addProviderProductAsync(providerType: any, providerId: string, input: any) { return this.supabaseProviders.addProviderProduct(providerType, providerId, input); }
+  updateProviderProductAsync(productId: string, input: any) { return this.supabaseProviders.updateProviderProduct(productId, input); }
+  setProviderProductStatusAsync(productId: string, isAvailable: boolean) { return this.supabaseProviders.setProviderProductStatus(productId, isAvailable); }
+  softDeleteProviderProductAsync(productId: string) { return this.supabaseProviders.softDeleteProviderProduct(productId); }
+  findProviderProductDuplicateAsync(providerType: any, providerId: string, name: string, dosage: string, excludeProductId?: string) { return this.supabaseProviders.findProviderProductDuplicate(providerType, providerId, name, dosage, excludeProductId); }
 
   getStoresAsync(includeInactive = true) { return this.supabaseProviders.getStores(includeInactive); }
   getActiveStoresAsync() { return this.supabaseProviders.getStores(false); }

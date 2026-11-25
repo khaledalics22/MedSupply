@@ -10,10 +10,12 @@ import styles from './styles';
 export default function AdminStoreDetailLayout({ storeId, onBack, onEdit, onAddProduct, onEditProduct }: { storeId: string; onBack: () => void; onEdit: (storeId: string) => void; onAddProduct: () => void; onEditProduct: (product: Product) => void }) {
   const database = iocContainer.getDatabase();
   const [, refresh] = useState(0);
-  const [store, setStore] = useState(database.getStoreById(storeId));
+  const [store, setStore] = useState<import('../../models/data_types').Store | undefined>(undefined);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const products = useMemo(() => database.getProductsByStore(storeId), [database, storeId, refresh]);
   const [confirmStatus, setConfirmStatus] = useState(false);
+  const [deleteProductId, setDeleteProductId] = useState<string | null>(null);
+  const [deletingProduct, setDeletingProduct] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [productQuery, setProductQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
@@ -25,6 +27,33 @@ export default function AdminStoreDetailLayout({ storeId, onBack, onEdit, onAddP
       .then((item) => { if (active) setStore(item); })
       .catch((caught) => setFeedback(caught instanceof Error ? caught.message : 'Unable to load store'))
       .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [storeId, refresh]);
+
+  useEffect(() => {
+    let active = true;
+    const database = iocContainer.getDatabase();
+    console.log('[MedSupply][AdminStoreDetail] mounted', { providerId: storeId, productQueryProviderId: storeId, databaseImplementation: database.constructor?.name });
+    database.getProductsByStoreAsync(storeId)
+      .then((items) => {
+        if (!active) return;
+        console.log('[MedSupply][AdminStoreDetail] Supabase products returned', {
+          providerId: storeId,
+          count: items.length,
+          products: items.map((item) => ({ id: item.id, name: item.name, providerId: item.sellerId, sellerType: item.sellerType })),
+        });
+        setProducts(items);
+      })
+      .catch((caught) => {
+        const code = caught && typeof caught === 'object' && 'code' in caught ? String((caught as { code?: unknown }).code ?? '') : '';
+        console.warn('[MedSupply][AdminStoreDetail] Supabase product query failed', {
+          providerId: storeId,
+          code,
+          message: caught instanceof Error ? caught.message : String(caught),
+          databaseImplementation: database.constructor?.name,
+        });
+        setFeedback(caught instanceof Error ? caught.message : 'Unable to load products');
+      });
     return () => { active = false; };
   }, [storeId, refresh]);
 
@@ -48,6 +77,31 @@ export default function AdminStoreDetailLayout({ storeId, onBack, onEdit, onAddP
     } catch (caught) {
       setConfirmStatus(false);
       setFeedback(caught instanceof Error ? caught.message : 'Unable to update store status.');
+    }
+  };
+
+  const confirmDeleteProduct = (productId: string) => {
+    setDeleteProductId(productId);
+  };
+
+  const cancelDeleteProduct = () => {
+    setDeleteProductId(null);
+  };
+
+  const deleteProduct = async () => {
+    if (!deleteProductId || deletingProduct) return;
+    setDeletingProduct(true);
+    try {
+      await iocContainer.getDatabase().softDeleteProviderProductAsync(deleteProductId);
+      setProducts((items) => items.filter((item) => item.id !== deleteProductId));
+      setDeleteProductId(null);
+      setFeedback('Product deleted successfully.');
+      refresh((value) => value + 1);
+    } catch (caught) {
+      setFeedback(caught instanceof Error ? caught.message : 'Unable to delete product.');
+      setDeleteProductId(null);
+    } finally {
+      setDeletingProduct(false);
     }
   };
 
@@ -110,7 +164,7 @@ export default function AdminStoreDetailLayout({ storeId, onBack, onEdit, onAddP
             <View key={product.id} style={styles.productRow}>
               <TouchableOpacity style={styles.productIcon} onPress={() => onEditProduct(product)}><Ionicons name="cube-outline" size={20} color="#208AEF" /></TouchableOpacity>
               <TouchableOpacity style={styles.productInfo} onPress={() => onEditProduct(product)}><Text style={styles.productName}>{product.name}</Text><Text style={styles.productMeta}>{product.dosage ?? 'Dosage unspecified'} • {product.stockQuantity} in stock • {getStockStatus(product.stockQuantity, product.isAvailable).replace('-', ' ')}</Text><Text style={styles.productMeta}>Consumer {product.consumerPrice.toFixed(2)} • Discount {product.discountPercentage}%</Text></TouchableOpacity>
-              <View style={styles.productActions}><Text style={styles.productPrice}>{product.pharmacyPriceAfterDiscount.toFixed(2)} EGP</Text><TouchableOpacity onPress={() => { database.setProviderProductStatus(product.id, !product.isAvailable); refresh((value) => value + 1); }}><Text style={styles.toggleText}>{product.isAvailable ? 'Deactivate' : 'Activate'}</Text></TouchableOpacity></View>
+              <View style={styles.productActions}><Text style={styles.productPrice}>{product.pharmacyPriceAfterDiscount.toFixed(2)} EGP</Text><TouchableOpacity onPress={async () => { try { await iocContainer.getDatabase().setProviderProductStatusAsync(product.id, !product.isAvailable); setFeedback(`Product ${product.isAvailable ? 'deactivated' : 'activated'} successfully.`); refresh((value) => value + 1); } catch (caught) { setFeedback(caught instanceof Error ? caught.message : 'Unable to update product status.'); } }}><Text style={styles.toggleText}>{product.isAvailable ? 'Deactivate' : 'Activate'}</Text></TouchableOpacity><TouchableOpacity onPress={() => setDeleteProductId(product.id)}><Text style={styles.deleteText}>Delete</Text></TouchableOpacity></View>
             </View>
           ))}
         </View>
@@ -124,6 +178,19 @@ export default function AdminStoreDetailLayout({ storeId, onBack, onEdit, onAddP
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.cancelButton} onPress={() => setConfirmStatus(false)}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity>
               <TouchableOpacity style={[styles.confirmButton, store.status === 'active' ? styles.confirmDeactivate : styles.confirmActivate]} onPress={changeStatus}><Text style={styles.confirmText}>Confirm</Text></TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={deleteProductId !== null} transparent animationType="fade" onRequestClose={() => setDeleteProductId(null)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Delete product?</Text>
+            <Text style={styles.modalText}>This product will be removed from normal management and pharmacist listings. Historical orders will remain unchanged.</Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.cancelButton} onPress={() => setDeleteProductId(null)} disabled={deletingProduct}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.deleteConfirmButton} onPress={deleteProduct} disabled={deletingProduct}><Text style={styles.confirmText}>{deletingProduct ? 'Deleting...' : 'Delete'}</Text></TouchableOpacity>
             </View>
           </View>
         </View>

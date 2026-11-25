@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import ProductCard from '../../components/product_card';
@@ -24,13 +24,19 @@ export default function FactoryDetailLayout({
   const database = iocContainer.getDatabase();
   const { cart, addToCart, updateQuantity, favoriteProducts, toggleFavoriteProduct } = useAppState();
   const [productQuery, setProductQuery] = useState('');
-  const factory = database.getFactoryById(factoryId);
+  const [factory, setFactory] = useState<import('../../models/data_types').Factory | undefined>(undefined);
+  const [providerProducts, setProviderProducts] = useState<import('../../models/data_types').Product[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    database.getFactoryByIdAsync(factoryId).then((item) => { if (active) setFactory(item); });
+    database.getProductsByManufacturerAsync(factoryId).then((items) => { if (active) setProviderProducts(items); });
+    return () => { active = false; };
+  }, [database, factoryId]);
 
   const products = useMemo(() => {
-    return database
-      .getProductsByManufacturer(factoryId)
-      .filter((product) => matchesAnySearch([product.name, product.description, product.dosage, product.packageSize], productQuery));
-  }, [database, factoryId, productQuery]);
+    return providerProducts.filter((product) => matchesAnySearch([product.name, product.description, product.dosage, product.packageSize], productQuery));
+  }, [providerProducts, productQuery]);
 
   if (!factory || factory.status !== 'active') {
     return (

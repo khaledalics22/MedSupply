@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import type { Product } from '../../models/data_types';
@@ -9,26 +9,77 @@ import styles from './styles';
 
 export default function AdminProductOverviewLayout({ onBack, onProductSelected, initialStockFilter }: { onBack: () => void; onProductSelected: (product: Product) => void; initialStockFilter?: 'all' | 'available' | 'low-stock' | 'out-of-stock' }) {
   const database = iocContainer.getDatabase();
-  const specialties = database.getSpecialties();
   const [query, setQuery] = useState('');
   const [providerType, setProviderType] = useState<'all' | 'store' | 'manufacturer'>('all');
   const [categoryId, setCategoryId] = useState<'all' | string>('all');
   const [stockFilter, setStockFilter] = useState<'all' | 'available' | 'low-stock' | 'out-of-stock'>(initialStockFilter ?? 'all');
   const [availabilityFilter, setAvailabilityFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [sortMode, setSortMode] = useState<'name' | 'priceAsc' | 'priceDesc' | 'discount' | 'stockAsc' | 'stockDesc'>('name');
+  const [specialties, setSpecialties] = useState<import('../../models/data_types').Specialty[]>([]);
+  const [storeNames, setStoreNames] = useState<Record<string, string>>({});
+  const [manufacturerNames, setManufacturerNames] = useState<Record<string, string>>({});
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [refreshVersion, setRefreshVersion] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const [specialtyItems, storeItems, manufacturerItems] = await Promise.all([
+          database.getSpecialtiesAsync(),
+          database.getStoresAsync(true),
+          database.getFactoriesAsync(true),
+        ]);
+        if (!active) return;
+
+        setSpecialties(specialtyItems);
+        setStoreNames(Object.fromEntries(storeItems.map((store) => [store.id, store.name])));
+        setManufacturerNames(Object.fromEntries(manufacturerItems.map((manufacturer) => [manufacturer.id, manufacturer.name])));
+
+        const [storeProducts, manufacturerProducts] = await Promise.all([
+          Promise.all(storeItems.map((store) => database.getProductsByStoreAsync(store.id))),
+          Promise.all(manufacturerItems.map((manufacturer) => database.getProductsByManufacturerAsync(manufacturer.id))),
+        ]);
+        if (!active) return;
+
+        const combined = [...storeProducts.flat(), ...manufacturerProducts.flat()];
+        const deduplicated = Array.from(new Map(combined.map((product) => [product.id, product])).values());
+        setProducts(deduplicated);
+      } catch (caught) {
+        if (!active) return;
+        setError(caught instanceof Error ? caught.message : 'Unable to load product overview.');
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    void load();
+    return () => { active = false; };
+  }, [database, refreshVersion]);
 
   const providerName = (product: Product) => {
-    if (product.sellerType === 'store') return database.getStoreById(product.sellerId)?.name ?? 'Unknown store';
-    return database.getFactoryById(product.sellerId)?.name ?? 'Unknown manufacturer';
+    if (product.sellerType === 'store') return storeNames[product.sellerId] ?? 'Unknown store';
+    return manufacturerNames[product.sellerId] ?? 'Unknown manufacturer';
   };
 
-  const products = useMemo(() => {
+  const filteredProducts = useMemo(() => {
     const normalizedQuery = query.trim().replace(/\s+/g, ' ').toLowerCase();
     const compactQuery = normalizedQuery.replace(/\s+/g, '').replace(/\s/g, '');
 
-    let filtered = database.getProducts().filter((product) => {
+    let filtered = products.filter((product) => {
       if (providerType !== 'all' && product.sellerType !== providerType) return false;
-      if (categoryId !== 'all' && product.specialtyId !== categoryId) return false;
+      if (categoryId !== 'all') {
+        const selectedSpecialty = specialties.find((specialty) => specialty.id === categoryId || specialty.legacyId === categoryId);
+        const matchesSpecialty = Boolean(selectedSpecialty && (
+          product.specialtyId === selectedSpecialty.id ||
+          (selectedSpecialty.legacyId && product.specialtyId === selectedSpecialty.legacyId)
+        )) || product.specialtyId === categoryId;
+        if (!matchesSpecialty) return false;
+      }
       if (availabilityFilter === 'active' && !product.isAvailable) return false;
       if (availabilityFilter === 'inactive' && product.isAvailable) return false;
 
@@ -50,7 +101,7 @@ export default function AdminProductOverviewLayout({ onBack, onProductSelected, 
     if (sortMode === 'stockAsc') filtered = [...filtered].sort((left, right) => left.stockQuantity - right.stockQuantity);
     if (sortMode === 'stockDesc') filtered = [...filtered].sort((left, right) => right.stockQuantity - left.stockQuantity);
     return filtered;
-  }, [query, providerType, categoryId, stockFilter, availabilityFilter, sortMode]);
+  }, [query, providerType, categoryId, stockFilter, availabilityFilter, sortMode, products, specialties]);
 
   const clearFilters = () => {
     setQuery('');
@@ -62,6 +113,19 @@ export default function AdminProductOverviewLayout({ onBack, onProductSelected, 
   };
 
   const activeFilterCount = (providerType !== 'all' ? 1 : 0) + (categoryId !== 'all' ? 1 : 0) + (stockFilter !== 'all' ? 1 : 0) + (availabilityFilter !== 'all' ? 1 : 0) + (query.trim() ? 1 : 0) + (sortMode !== 'name' ? 1 : 0);
+
+  if (loading) {
+    return <Text>Loading...</Text>;
+  }
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}><TouchableOpacity style={styles.backButton} onPress={onBack}><Ionicons name="arrow-back" size={20} color="#FFFFFF" /></TouchableOpacity><Text style={styles.title}>Product Overview</Text><View style={styles.headerSpace} /></View>
+        <View style={styles.empty}><Text style={styles.emptyTitle}>Unable to load products</Text><Text style={styles.emptyText}>{error}</Text><TouchableOpacity style={styles.clearButton} onPress={() => setRefreshVersion((value) => value + 1)}><Text style={styles.clearText}>Retry</Text></TouchableOpacity></View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -101,15 +165,20 @@ export default function AdminProductOverviewLayout({ onBack, onProductSelected, 
       </View>
 
       <View style={styles.categoryRow}>
-        {(['all', ...specialties.map((item) => item.id)] as const).map((id) => (
-          <TouchableOpacity key={id} style={[styles.categoryFilter, categoryId === id && styles.categoryFilterActive]} onPress={() => setCategoryId(id)}><Text style={[styles.categoryText, categoryId === id && styles.categoryTextActive]}>{id === 'all' ? 'All categories' : specialties.find((item) => item.id === id)?.name ?? id}</Text></TouchableOpacity>
-        ))}
+        {(['all', ...specialties.map((item) => item.legacyId ?? item.id)] as const).map((id) => {
+          const specialty = specialties.find((item) => item.id === id || item.legacyId === id);
+          return (
+            <TouchableOpacity key={id} style={[styles.categoryFilter, categoryId === id && styles.categoryFilterActive]} onPress={() => setCategoryId(id)}>
+              <Text style={[styles.categoryText, categoryId === id && styles.categoryTextActive]}>{id === 'all' ? 'All categories' : specialty?.name ?? id}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       {activeFilterCount > 0 ? <TouchableOpacity style={styles.clearButton} onPress={clearFilters}><Text style={styles.clearText}>Clear filters ({activeFilterCount})</Text></TouchableOpacity> : null}
 
       <FlatList
-        data={products}
+        data={filteredProducts}
         keyExtractor={(product) => product.id}
         contentContainerStyle={styles.list}
         ListEmptyComponent={<View style={styles.empty}><Ionicons name="cube-outline" size={38} color="#94A3B8" /><Text style={styles.emptyTitle}>No products found</Text><Text style={styles.emptyText}>Try clearing or changing filters.</Text></View>}
@@ -118,7 +187,7 @@ export default function AdminProductOverviewLayout({ onBack, onProductSelected, 
             <View style={styles.icon}><Ionicons name="cube-outline" size={24} color="#208AEF" /></View>
             <View style={styles.info}>
               <Text style={styles.productName}>{item.name}</Text>
-              <Text style={styles.meta}>{item.dosage ?? 'Dosage unspecified'} • {specialties.find((category) => category.id === item.specialtyId)?.name ?? item.specialtyId}</Text>
+              <Text style={styles.meta}>{item.dosage ?? 'Dosage unspecified'} • {specialties.find((category) => category.id === item.specialtyId || category.legacyId === item.specialtyId)?.name ?? item.specialtyId}</Text>
               <Text style={styles.provider}>{providerName(item)} • {item.sellerType === 'store' ? 'Store' : 'Manufacturer'}</Text>
               <Text style={styles.meta}>Stock: {item.stockQuantity} • {getStockStatus(item.stockQuantity, item.isAvailable).replace('-', ' ')} • {item.isAvailable ? 'Active' : 'Inactive'}</Text>
               <View style={styles.prices}><Text style={styles.consumer}>{item.consumerPrice.toFixed(2)} EGP</Text><Text style={styles.pharmacist}>{item.pharmacyPriceAfterDiscount.toFixed(2)} EGP</Text><Text style={styles.discount}>-{item.discountPercentage}%</Text></View>

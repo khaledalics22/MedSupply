@@ -16,6 +16,7 @@ import {
 export abstract class Database {
   abstract getAdvertisements(): Advertisement[];
   abstract getSpecialties(): Specialty[];
+  abstract getSpecialtiesAsync(): Promise<Specialty[]>;
   abstract getSpecialtyById(specialtyId: string): Specialty | undefined;
   abstract getProducts(): Product[];
   abstract getAvailableProducts(): Product[];
@@ -60,6 +61,15 @@ export abstract class Database {
   abstract addFactoryAsync(input: ManufacturerInput): Promise<Factory>;
   abstract updateFactoryAsync(factoryId: string, input: ManufacturerInput): Promise<Factory>;
   abstract setFactoryStatusAsync(factoryId: string, status: 'active' | 'inactive'): Promise<Factory>;
+
+  abstract getProductsByStoreAsync(storeId: string): Promise<Product[]>;
+  abstract getProductsByManufacturerAsync(manufacturerId: string): Promise<Product[]>;
+  abstract getProductByIdAsync(productId: string): Promise<Product | undefined>;
+  abstract addProviderProductAsync(providerType: ProducerType, providerId: string, input: ProductInput): Promise<Product>;
+  abstract updateProviderProductAsync(productId: string, input: ProductInput): Promise<Product>;
+  abstract setProviderProductStatusAsync(productId: string, isAvailable: boolean): Promise<Product>;
+  abstract softDeleteProviderProductAsync(productId: string): Promise<void>;
+  abstract findProviderProductDuplicateAsync(providerType: ProducerType, providerId: string, name: string, dosage: string, excludeProductId?: string): Promise<Product | undefined>;
 }
 
 export class MockDatabase extends Database {
@@ -138,6 +148,7 @@ export class MockDatabase extends Database {
 
   getAdvertisements(): Advertisement[] { return [...this.advertisements].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)); }
   getSpecialties(): Specialty[] { return [...this.specialties]; }
+  async getSpecialtiesAsync(): Promise<Specialty[]> { return [...this.specialties]; }
   getSpecialtyById(specialtyId: string): Specialty | undefined { return this.specialties.find((item) => item.id === specialtyId); }
   getProducts(): Product[] { return [...this.products]; }
   getAvailableProducts(): Product[] {
@@ -425,6 +436,20 @@ export class MockDatabase extends Database {
     for (const [productId, quantity] of Object.entries(quantities)) this.deductProductStock(productId, quantity);
     return { success: true, errors: [] };
   }
+
+  // Async provider-product methods
+  async getProductsByStoreAsync(storeId: string): Promise<Product[]> { return this.getProductsByStore(storeId); }
+  async getProductsByManufacturerAsync(manufacturerId: string): Promise<Product[]> { return this.getProductsByManufacturer(manufacturerId); }
+  async getProductByIdAsync(productId: string): Promise<Product | undefined> { return this.getProductById(productId); }
+  async addProviderProductAsync(providerType: ProducerType, providerId: string, input: ProductInput): Promise<Product> { return this.addProviderProduct(providerType, providerId, input); }
+  async updateProviderProductAsync(productId: string, input: ProductInput): Promise<Product> { return this.updateProviderProduct(productId, input); }
+  async setProviderProductStatusAsync(productId: string, isAvailable: boolean): Promise<Product> { return this.setProviderProductStatus(productId, isAvailable); }
+  async softDeleteProviderProductAsync(productId: string): Promise<void> {
+    const product = this.getProductById(productId);
+    if (!product) throw new Error('Product not found');
+    product.isAvailable = false;
+  }
+  async findProviderProductDuplicateAsync(providerType: ProducerType, providerId: string, name: string, dosage: string, excludeProductId?: string): Promise<Product | undefined> { return this.findProviderProductDuplicate(providerType, providerId, name, dosage, excludeProductId); }
 
   // Async methods
   async getStoresAsync(includeInactive?: boolean): Promise<Store[]> {

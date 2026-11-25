@@ -23,6 +23,7 @@ export interface Product {
 
 export interface Specialty {
   id: string;
+  legacyId?: string;
   name: string;
   description: string;
   image: string;

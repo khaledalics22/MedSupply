@@ -42,4 +42,6 @@ export default StyleSheet.create({
   productFilterTextActive: { color: '#208AEF' },
   productActions: { alignItems: 'flex-end' },
   toggleText: { color: '#208AEF', fontSize: 11, fontWeight: '900', marginTop: 5 },
+  deleteText: { color: '#DC2626', fontSize: 11, fontWeight: '900', marginTop: 5 },
+  deleteConfirmButton: { flex: 1, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#DC2626' },
 });

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import ProductCard from '../../components/product_card';
 import SearchBar from '../../components/search_bar';
@@ -25,14 +25,15 @@ export default function StoreDetailLayout({
   const { cart, addToCart, updateQuantity, favoriteStores, toggleFavoriteStore, orders, favoriteProducts, toggleFavoriteProduct } = useAppState();
   const [tab, setTab] = useState<'medicines' | 'pending' | 'my-orders'>('medicines');
   const [productQuery, setProductQuery] = useState('');
+  const [store, setStore] = useState<import('../../models/data_types').Store | undefined>(undefined);
+  const [products, setProducts] = useState<import('../../models/data_types').Product[]>([]);
 
-  const store = database.getStoreById(storeId);
-
-  const products = useMemo(() => {
-    return database
-      .getProductsByStore(storeId)
-      .filter((product) => matchesAnySearch([product.name, product.description, product.dosage, product.packageSize], productQuery));
-  }, [database, storeId, productQuery]);
+  useEffect(() => {
+    let active = true;
+    database.getStoreByIdAsync(storeId).then((item) => { if (active) setStore(item); });
+    database.getProductsByStoreAsync(storeId).then((items) => { if (active) setProducts(items); });
+    return () => { active = false; };
+  }, [database, storeId]);
 
   const pendingOrders = useMemo(
     () => orders.filter((order) => order.sellerType === 'store' && order.sellerId === storeId && order.status === 'pending'),
@@ -109,7 +110,7 @@ export default function StoreDetailLayout({
             {products.length === 0 ? (
               <Text style={styles.emptyState}>No products available for this store.</Text>
             ) : (
-              products.map((product) => {
+              products.filter((product) => matchesAnySearch([product.name, product.description, product.dosage, product.packageSize], productQuery)).map((product) => {
                 const cartItem = cart.find((entry) => entry.productId === product.id);
                 return (
                   <ProductCard
