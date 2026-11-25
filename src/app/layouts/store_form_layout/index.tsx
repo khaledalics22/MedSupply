@@ -1,13 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import type { Store, StoreInput, StoreStatus } from '../../models/data_types';
 import { iocContainer } from '../../models/ioc_container';
 import styles from './styles';
 
-export default function StoreFormLayout({ store, onBack, onSaved }: { store?: Store; onBack: () => void; onSaved: (message: string) => void }) {
-  const database = iocContainer.getDatabase();
+export default function StoreFormLayout({ storeId, onBack, onSaved }: { storeId?: string; onBack: () => void; onSaved: (message: string) => void }) {
+  const [store, setStore] = useState<Store | undefined>(undefined);
   const [name, setName] = useState(store?.name ?? '');
   const [contactPerson, setContactPerson] = useState(store?.contactPerson ?? '');
   const [phone, setPhone] = useState(store?.phone ?? '');
@@ -18,6 +18,29 @@ export default function StoreFormLayout({ store, onBack, onSaved }: { store?: St
   const [error, setError] = useState('');
   const [confirmSave, setConfirmSave] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!storeId) { setLoading(false); return; }
+
+    let active = true;
+    iocContainer.getDatabase().getStoreByIdAsync(storeId)
+      .then((item) => {
+        if (!active) return;
+        setStore(item);
+        setName(item?.name ?? '');
+        setContactPerson(item?.contactPerson ?? '');
+        setPhone(item?.phone ?? '');
+        setAddress(item?.address ?? '');
+        setDescription(item?.description ?? '');
+        setImage(item?.image ?? '');
+        setStatus(item?.status ?? 'active');
+      })
+      .catch((caught) => setError(caught instanceof Error ? caught.message : 'Unable to load store.'))
+      .finally(() => { if (active) setLoading(false); });
+
+    return () => { active = false; };
+  }, [storeId]);
 
   const validate = () => {
     if (!name.trim() || !contactPerson.trim() || !phone.trim() || !address.trim()) return 'Please complete all required fields.';
@@ -46,6 +69,10 @@ export default function StoreFormLayout({ store, onBack, onSaved }: { store?: St
       setSaving(false);
     }
   };
+
+  if (loading) {
+    return <View style={styles.container}><View style={styles.header}><TouchableOpacity style={styles.backButton} onPress={onBack}><Ionicons name="arrow-back" size={20} color="#FFFFFF" /></TouchableOpacity><Text style={styles.title}>Loading store...</Text></View></View>;
+  }
 
   return (
     <View style={styles.container}>

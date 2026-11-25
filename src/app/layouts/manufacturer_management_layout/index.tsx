@@ -6,7 +6,7 @@ import type { Factory } from '../../models/data_types';
 import { iocContainer } from '../../models/ioc_container';
 import styles from './styles';
 
-export default function ManufacturerManagementLayout({ onBack, onAdd, onSelected, feedback }: { onBack: () => void; onAdd: () => void; onSelected: (factoryId: string) => void; feedback?: string }) {
+export default function ManufacturerManagementLayout({ refreshToken = 0, onBack, onAdd, onSelected, feedback }: { refreshToken?: number; onBack: () => void; onAdd: () => void; onSelected: (factoryId: string) => void; feedback?: string }) {
   const database = iocContainer.getDatabase();
   const [query, setQuery] = useState('');
   const [, refresh] = useState(0);
@@ -21,7 +21,7 @@ export default function ManufacturerManagementLayout({ onBack, onAdd, onSelected
       .catch((caught) => { if (active) setError(caught instanceof Error ? caught.message : 'Unable to load manufacturers'); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [refresh]);
+  }, [refresh, refreshToken]);
 
   const filteredManufacturers = manufacturers.filter((factory) => factory.name.toLowerCase().includes(query.trim().toLowerCase()));
 

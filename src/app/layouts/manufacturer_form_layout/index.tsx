@@ -1,13 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import type { Factory, ManufacturerInput, ManufacturerStatus } from '../../models/data_types';
 import { iocContainer } from '../../models/ioc_container';
 import styles from './styles';
 
-export default function ManufacturerFormLayout({ factory, onBack, onSaved }: { factory?: Factory; onBack: () => void; onSaved: (message: string) => void }) {
-  const database = iocContainer.getDatabase();
+export default function ManufacturerFormLayout({ factoryId, onBack, onSaved }: { factoryId?: string; onBack: () => void; onSaved: (message: string) => void }) {
+  const [factory, setFactory] = useState<Factory | undefined>(undefined);
+  const [loading, setLoading] = useState(Boolean(factoryId));
   const [name, setName] = useState(factory?.name ?? '');
   const [contactPerson, setContactPerson] = useState(factory?.contactPerson ?? '');
   const [phone, setPhone] = useState(factory?.phone ?? '');
@@ -18,6 +19,28 @@ export default function ManufacturerFormLayout({ factory, onBack, onSaved }: { f
   const [error, setError] = useState('');
   const [confirmSave, setConfirmSave] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!factoryId) { setLoading(false); return; }
+
+    let active = true;
+    iocContainer.getDatabase().getFactoryByIdAsync(factoryId)
+      .then((item) => {
+        if (!active) return;
+        setFactory(item);
+        setName(item?.name ?? '');
+        setContactPerson(item?.contactPerson ?? '');
+        setPhone(item?.phone ?? '');
+        setAddress(typeof item?.location === 'string' ? item.location : item?.address ?? '');
+        setDescription(item?.description ?? '');
+        setImage(item?.image ?? '');
+        setStatus(item?.status ?? 'active');
+      })
+      .catch((caught) => setError(caught instanceof Error ? caught.message : 'Unable to load manufacturer.'))
+      .finally(() => { if (active) setLoading(false); });
+
+    return () => { active = false; };
+  }, [factoryId]);
 
   const validate = () => {
     if (!name.trim() || !contactPerson.trim() || !phone.trim() || !address.trim()) return 'Please complete all required fields.';
@@ -46,6 +69,10 @@ export default function ManufacturerFormLayout({ factory, onBack, onSaved }: { f
       setSaving(false);
     }
   };
+
+  if (loading) {
+    return <View style={styles.container}><View style={styles.header}><TouchableOpacity style={styles.backButton} onPress={onBack}><Ionicons name="arrow-back" size={20} color="#FFFFFF" /></TouchableOpacity><Text style={styles.title}>Loading manufacturer...</Text></View></View>;
+  }
 
   return (
     <View style={styles.container}>

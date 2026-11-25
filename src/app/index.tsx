@@ -295,6 +295,7 @@ function AdminApp() {
   const [selectedPharmacistId, setSelectedPharmacistId] = useState<string | null>(null);
   const [pharmacistInitialStatus, setPharmacistInitialStatus] = useState<'all' | 'pending' | 'active' | 'rejected' | 'inactive'>('all');
   const [storeListRefresh, setStoreListRefresh] = useState(0);
+  const [manufacturerListRefresh, setManufacturerListRefresh] = useState(0);
 
   const openStoreForm = (storeId?: string) => { setEditingStoreId(storeId); setScreen('store-form'); };
   const openManufacturerForm = (factoryId?: string) => { setEditingFactoryId(factoryId); setScreen('manufacturer-form'); };
@@ -335,12 +336,15 @@ function AdminApp() {
     />;
   }
   if (screen === 'store-form') {
-    const store = editingStoreId ? iocContainer.getDatabase().getStoreById(editingStoreId) : undefined;
-    return <StoreFormLayout store={store} onBack={() => setScreen(editingStoreId ? 'store-detail' : 'store-list')} onSaved={(message) => { setStoreFeedback(message); setStoreListRefresh((value) => value + 1); setEditingStoreId(undefined); setScreen('store-list'); }} />;
+    return <StoreFormLayout
+      storeId={editingStoreId}
+      onBack={() => setScreen(editingStoreId ? 'store-detail' : 'store-list')}
+      onSaved={(message) => { setStoreFeedback(message); setStoreListRefresh((value) => value + 1); setEditingStoreId(undefined); setScreen('store-list'); }}
+    />;
   }
 
   if (screen === 'manufacturer-list') {
-    return <ManufacturerManagementLayout onBack={() => setScreen('dashboard')} onAdd={() => openManufacturerForm()} onSelected={(factoryId) => { setSelectedFactoryId(factoryId); setScreen('manufacturer-detail'); }} feedback={manufacturerFeedback} />;
+    return <ManufacturerManagementLayout refreshToken={manufacturerListRefresh} onBack={() => setScreen('dashboard')} onAdd={() => openManufacturerForm()} onSelected={(factoryId) => { setSelectedFactoryId(factoryId); setScreen('manufacturer-detail'); }} feedback={manufacturerFeedback} />;
   }
   if (screen === 'manufacturer-detail' && selectedFactoryId) {
     return <AdminManufacturerDetailLayout
@@ -352,8 +356,11 @@ function AdminApp() {
     />;
   }
   if (screen === 'manufacturer-form') {
-    const factory = editingFactoryId ? iocContainer.getDatabase().getFactoryById(editingFactoryId) : undefined;
-    return <ManufacturerFormLayout factory={factory} onBack={() => setScreen(editingFactoryId ? 'manufacturer-detail' : 'manufacturer-list')} onSaved={(message) => { setManufacturerFeedback(message); setEditingFactoryId(undefined); setScreen('manufacturer-list'); }} />;
+    return <ManufacturerFormLayout
+      factoryId={editingFactoryId}
+      onBack={() => setScreen(editingFactoryId ? 'manufacturer-detail' : 'manufacturer-list')}
+      onSaved={(message) => { setManufacturerFeedback(message); setManufacturerListRefresh((value) => value + 1); setEditingFactoryId(undefined); setScreen('manufacturer-list'); }}
+    />;
   }
 
   if (screen === 'provider-product-form' && providerId) {
