@@ -201,3 +201,18 @@ export interface CheckoutValidationIssue {
   oldDiscount?: number;
   currentDiscount?: number;
 }
+
+export interface OrderCreationItem {
+  productId: string;
+  quantity: number;
+}
+
+export interface OrderCreationResult {
+  orderId: string;
+  totalQuantity: number;
+  lineCount: number;
+  subtotalAmount: number;
+  discountAmount: number;
+  totalAmount: number;
+  status: 'pending';
+}

@@ -11,6 +11,8 @@ import {
   type ManufacturerInput,
   type ProductInput,
   type OrderLineSnapshot,
+  type OrderCreationItem,
+  type OrderCreationResult,
 } from './data_types';
 
 export abstract class Database {
@@ -50,6 +52,7 @@ export abstract class Database {
   abstract findProviderProductDuplicate(providerType: ProducerType, providerId: string, name: string, dosage: string, excludeProductId?: string): Product | undefined;
   abstract validateOrderStock(lines: OrderLineSnapshot[]): string[];
   abstract approveAndDeductOrderStock(lines: OrderLineSnapshot[]): { success: boolean; errors: string[] };
+  abstract createOrderAsync(items: OrderCreationItem[]): Promise<OrderCreationResult>;
 
   abstract getStoresAsync(includeInactive?: boolean): Promise<Store[]>;
   abstract getActiveStoresAsync(): Promise<Store[]>;
@@ -460,6 +463,12 @@ export class MockDatabase extends Database {
     product.isAvailable = false;
   }
   async findProviderProductDuplicateAsync(providerType: ProducerType, providerId: string, name: string, dosage: string, excludeProductId?: string): Promise<Product | undefined> { return this.findProviderProductDuplicate(providerType, providerId, name, dosage, excludeProductId); }
+
+  // Async order methods
+  async createOrderAsync(items: OrderCreationItem[]): Promise<OrderCreationResult> {
+    if (items.length === 0) throw new Error('At least one order item is required.');
+    throw new Error('Mock order creation is unavailable. Use Supabase create_order in production.');
+  }
 
   // Async methods
   async getStoresAsync(includeInactive?: boolean): Promise<Store[]> {

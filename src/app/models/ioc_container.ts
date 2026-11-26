@@ -86,6 +86,7 @@ class ProviderAwareDatabase extends Database {
   addFactoryAsync(input: any) { return this.supabaseProviders.addFactory(input); }
   updateFactoryAsync(factoryId: string, input: any) { return this.supabaseProviders.updateFactory(factoryId, input); }
   setFactoryStatusAsync(factoryId: string, status: 'active' | 'inactive') { return this.supabaseProviders.setFactoryStatus(factoryId, status); }
+  createOrderAsync(items: any[]) { return this.supabaseProviders.createOrderAsync(items); }
 }
 
 export const iocContainer = IoCContainer.getInstance();

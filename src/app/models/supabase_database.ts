@@ -7,6 +7,8 @@ import type {
   Store,
   StoreInput,
   Specialty,
+  OrderCreationItem,
+  OrderCreationResult,
 } from './data_types';
 import { ProducerType } from './data_types';
 import { calculatePharmacistPrice } from './database';
@@ -347,6 +349,27 @@ export class SupabaseProviderDatabase {
     return (data ?? [])
       .filter((row) => row.store_id ? storeIds.has(String(row.store_id)) : manufacturerIds.has(String(row.manufacturer_id)))
       .map((row) => this.mapProduct(row));
+  }
+
+  async createOrderAsync(items: OrderCreationItem[]): Promise<OrderCreationResult> {
+    const client = supabase;
+    if (!client) throw new Error('Supabase is not configured.');
+
+    const payload = items.map((item) => ({ product_id: item.productId, quantity: item.quantity }));
+    const { data, error } = await client.rpc('create_order', { order_items_input: payload });
+
+    if (error) throw new Error(`${error.code ?? 'DB_ERROR'}: ${error.message}`);
+    if (!data) throw new Error('Supabase did not return an order creation result.');
+
+    return {
+      orderId: String(data.order_id),
+      totalQuantity: Number(data.total_quantity),
+      lineCount: Number(data.line_count),
+      subtotalAmount: Number(data.subtotal_amount),
+      discountAmount: Number(data.discount_amount),
+      totalAmount: Number(data.total_amount),
+      status: 'pending',
+    };
   }
 }
 
