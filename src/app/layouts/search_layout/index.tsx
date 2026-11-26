@@ -30,38 +30,70 @@ export default function Search({ language, onProductSelected }: SearchProps) {
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const { cart, addToCart, updateQuantity, favoriteProducts, toggleFavoriteProduct } = useAppState();
 
+  const [availableProducts, setAvailableProducts] = useState<import('../../models/data_types').Product[]>([]);
+  const [specialties, setSpecialties] = useState<import('../../models/data_types').Specialty[]>([]);
+  const [stores, setStores] = useState<import('../../models/data_types').Store[]>([]);
+  const [manufacturers, setManufacturers] = useState<import('../../models/data_types').Factory[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        const [specialtyItems, storeItems, manufacturerItems, availableItems] = await Promise.all([
+          database.getSpecialtiesAsync(),
+          database.getActiveStoresAsync(),
+          database.getActiveFactoriesAsync(),
+          database.getAvailableProductsAsync(),
+        ]);
+        if (!active) return;
+        setSpecialties(specialtyItems);
+        setStores(storeItems);
+        setManufacturers(manufacturerItems);
+        setAvailableProducts(availableItems);
+      } catch (caught) {
+        if (active) setError(caught instanceof Error ? caught.message : 'Unable to load search products.');
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    void load();
+    return () => { active = false; };
+  }, [database]);
+
   useEffect(() => {
     const timeout = setTimeout(() => setDebouncedQuery(query.trim().replace(/\s+/g, ' ')), 250);
     return () => clearTimeout(timeout);
   }, [query]);
 
-  const normalizedQuery = debouncedQuery.toLowerCase();
-  const specialties = database.getSpecialties();
-
   const items = useMemo(() => {
-    let products = database.getProducts().filter((product) => {
+    let products = availableProducts.filter((product) => {
       if (providerType !== 'all' && product.sellerType !== providerType) return false;
       if (!includeOutOfStock && (!product.isAvailable || product.stockQuantity <= 0)) return false;
 
       if (product.sellerType === 'store') {
-        const store = database.getStoreById(product.sellerId);
-        if (!store || store.status !== 'active') return false;
+        if (!stores.some((store) => store.id === product.sellerId && store.status === 'active')) return false;
       } else {
-        const manufacturer = database.getFactoryById(product.sellerId);
-        if (!manufacturer || manufacturer.status !== 'active') return false;
+        if (!manufacturers.some((manufacturer) => manufacturer.id === product.sellerId && manufacturer.status === 'active')) return false;
       }
 
-      if (categoryId !== 'all' && product.specialtyId !== categoryId) return false;
+      if (categoryId !== 'all') {
+        const selectedSpecialty = specialties.find((specialty) => specialty.id === categoryId || specialty.legacyId === categoryId);
+        if (!(product.specialtyId === categoryId || (selectedSpecialty && (product.specialtyId === selectedSpecialty.id || product.specialtyId === selectedSpecialty.legacyId)))) return false;
+      }
       if (minDiscount.trim()) {
         const minimum = Number(minDiscount);
         if (!Number.isFinite(minimum) || product.discountPercentage < minimum) return false;
       }
 
-      if (normalizedQuery) {
+      if (debouncedQuery) {
         const name = product.name.toLowerCase().replace(/\s+/g, ' ').trim();
         const dosage = (product.dosage ?? '').toLowerCase().replace(/\s+/g, '').trim();
-        const compactQuery = normalizedQuery.replace(/\s+/g, '');
-        if (!name.includes(normalizedQuery) && !dosage.includes(compactQuery)) return false;
+        const compactQuery = debouncedQuery.replace(/\s+/g, '');
+        if (!name.includes(debouncedQuery) && !dosage.includes(compactQuery)) return false;
       }
       return true;
     });
@@ -71,7 +103,7 @@ export default function Search({ language, onProductSelected }: SearchProps) {
     if (sortMode === 'discount') products = [...products].sort((a, b) => b.discountPercentage - a.discountPercentage);
 
     return products;
-  }, [debouncedQuery, providerType, categoryId, minDiscount, includeOutOfStock, sortMode]);
+  }, [debouncedQuery, providerType, categoryId, minDiscount, includeOutOfStock, sortMode, availableProducts, stores, manufacturers, specialties]);
 
   const clearFilters = () => {
     setQuery('');
@@ -130,6 +162,8 @@ export default function Search({ language, onProductSelected }: SearchProps) {
         {activeFilterCount > 0 ? <TouchableOpacity style={styles.clearFilters} onPress={clearFilters}><Text style={styles.clearFiltersText}>Clear ({activeFilterCount})</Text></TouchableOpacity> : null}
       </View>
 
+      {loading ? <Text style={styles.emptyState}>Loading products...</Text> : error ? <Text style={styles.emptyState}>{error}</Text> : null}
+
       <FlatList
         data={items}
         keyExtractor={(item) => item.id}
@@ -137,8 +171,8 @@ export default function Search({ language, onProductSelected }: SearchProps) {
         ListEmptyComponent={<Text style={styles.emptyState}>{t('noMatchingItems', language)}</Text>}
         renderItem={({ item }) => {
           const cartItem = cart.find((entry) => entry.productId === item.id);
-          const store = item.sellerType === 'store' ? database.getStoreById(item.sellerId) : undefined;
-          const manufacturerName = item.sellerType === 'manufacturer' ? database.getFactoryById(item.sellerId)?.name : undefined;
+          const store = item.sellerType === 'store' ? stores.find((candidate) => candidate.id === item.sellerId) : undefined;
+          const manufacturerName = item.sellerType === 'manufacturer' ? manufacturers.find((candidate) => candidate.id === item.sellerId)?.name : undefined;
           return (
             <View>
               <ProductCard

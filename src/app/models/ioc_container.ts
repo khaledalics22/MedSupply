@@ -32,9 +32,12 @@ class ProviderAwareDatabase extends Database {
   getSpecialties() { return this.mock.getSpecialties(); }
   getSpecialtiesAsync() { return this.supabaseProviders.getSpecialties(); }
   getSpecialtyById(id: string) { return this.mock.getSpecialtyById(id); }
+  getSpecialtyByIdAsync(id: string) { return this.supabaseProviders.getSpecialtyById(id); }
   getProducts() { return this.mock.getProducts(); }
   getAvailableProducts() { return this.mock.getAvailableProducts(); }
+  getAvailableProductsAsync() { return this.supabaseProviders.getAvailableProducts(); }
   getProductsBySpecialty(id: string) { return this.mock.getProductsBySpecialty(id); }
+  getProductsBySpecialtyAsync(id: string) { return this.supabaseProviders.getProductsBySpecialty(id); }
   getProductsByStore(id: string) { return this.mock.getProductsByStore(id); }
   getProductsByManufacturer(id: string) { return this.mock.getProductsByManufacturer(id); }
   getStores() { return this.mock.getStores(); }

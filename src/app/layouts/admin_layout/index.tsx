@@ -43,10 +43,13 @@ export default function AdminLayout({ onStoreManagement, onAddStore, onManufactu
   const { orders } = useAppState();
   const database = iocContainer.getDatabase();
   const [pharmacists, setPharmacists] = useState<import('../../models/auth').User[]>([]);
+  const [stores, setStores] = useState<import('../../models/data_types').Store[]>([]);
+  const [manufacturers, setManufacturers] = useState<import('../../models/data_types').Factory[]>([]);
+  const [products, setProducts] = useState<import('../../models/data_types').Product[]>([]);
+  const [dashboardLoading, setDashboardLoading] = useState(true);
+  const [dashboardError, setDashboardError] = useState('');
+  const [dashboardRefresh, setDashboardRefresh] = useState(0);
 
-  const stores = database.getStores();
-  const manufacturers = database.getFactories();
-  const products = database.getProducts();
   const activeStores = stores.filter((store) => store.status === 'active').length;
   const activeManufacturers = manufacturers.filter((manufacturer) => manufacturer.status === 'active').length;
   const activeProducts = products.filter((product) => product.isAvailable && product.stockQuantity > 0).length;
@@ -77,8 +80,36 @@ export default function AdminLayout({ onStoreManagement, onAddStore, onManufactu
   ];
 
   useEffect(() => {
-    authService.getPharmacists().then(setPharmacists).catch(() => setPharmacists([]));
-  }, []);
+    let active = true;
+    const loadDashboard = async () => {
+      setDashboardLoading(true);
+      setDashboardError('');
+      try {
+        const [storeItems, manufacturerItems, pharmacistItems] = await Promise.all([
+          database.getStoresAsync(true),
+          database.getFactoriesAsync(true),
+          authService.getPharmacists(),
+        ]);
+        const [storeProducts, manufacturerProducts] = await Promise.all([
+          Promise.all(storeItems.map((store) => database.getProductsByStoreAsync(store.id))),
+          Promise.all(manufacturerItems.map((manufacturer) => database.getProductsByManufacturerAsync(manufacturer.id))),
+        ]);
+        if (!active) return;
+
+        const combinedProducts = [...storeProducts.flat(), ...manufacturerProducts.flat()];
+        setStores(storeItems);
+        setManufacturers(manufacturerItems);
+        setPharmacists(pharmacistItems);
+        setProducts(Array.from(new Map(combinedProducts.map((product) => [product.id, product])).values()));
+      } catch (caught) {
+        if (active) setDashboardError(caught instanceof Error ? caught.message : 'Unable to load dashboard statistics.');
+      } finally {
+        if (active) setDashboardLoading(false);
+      }
+    };
+    void loadDashboard();
+    return () => { active = false; };
+  }, [database, dashboardRefresh]);
 
   const pharmacistCounts = {
     total: pharmacists.length,
@@ -86,6 +117,62 @@ export default function AdminLayout({ onStoreManagement, onAddStore, onManufactu
     active: pharmacists.filter((pharmacist) => pharmacist.accountStatus === 'active').length,
     inactive: pharmacists.filter((pharmacist) => pharmacist.accountStatus === 'inactive').length,
   };
+
+  if (dashboardLoading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.brandMark}><Ionicons name="shield-checkmark" size={24} color="#FFFFFF" /></View>
+          <View style={styles.headerText}>
+            <Text style={styles.title}>Admin Dashboard</Text>
+            <Text style={styles.subtitle}>{user?.fullName}</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={() => void logout()}
+            accessibilityLabel="Logout"
+            accessibilityRole="button">
+            <Ionicons name="log-out-outline" size={21} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.emptyState}>
+          <Ionicons name="reload" size={32} color="#208AEF" />
+          <Text style={styles.emptyTitle}>Loading dashboard data...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (dashboardError) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.brandMark}><Ionicons name="shield-checkmark" size={24} color="#FFFFFF" /></View>
+          <View style={styles.headerText}>
+            <Text style={styles.title}>Admin Dashboard</Text>
+            <Text style={styles.subtitle}>{user?.fullName}</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={() => void logout()}
+            accessibilityLabel="Logout"
+            accessibilityRole="button">
+            <Ionicons name="log-out-outline" size={21} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.emptyState}>
+          <Ionicons name="warning-outline" size={32} color="#BE123C" />
+          <Text style={styles.emptyTitle}>Unable to load dashboard</Text>
+          <Text style={styles.emptyText}>{dashboardError}</Text>
+          <TouchableOpacity style={styles.viewAllButton} onPress={() => setDashboardRefresh((value) => value + 1)}>
+            <Text style={styles.viewAllText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>

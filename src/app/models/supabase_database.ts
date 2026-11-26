@@ -26,6 +26,7 @@ export class SupabaseProviderDatabase {
       status: row.status === 'inactive' ? 'inactive' : 'active',
       openHours: row.open_hours ? String(row.open_hours) : 'Not specified',
       rating: row.rating === null || row.rating === undefined ? 0 : Number(row.rating),
+      minimumOrderValue: row.minimum_order_value == null ? 0 : Number(row.minimum_order_value),
     };
   }
 
@@ -43,6 +44,7 @@ export class SupabaseProviderDatabase {
       certification: String(row.certification ?? 'Pending'),
       productionCapacity: String(row.production_capacity ?? 'Not specified'),
       status: row.status === 'inactive' ? 'inactive' : 'active',
+      minimumOrderValue: row.minimum_order_value == null ? 0 : Number(row.minimum_order_value),
     };
   }
 
@@ -188,6 +190,7 @@ export class SupabaseProviderDatabase {
       name: input.name.trim(), description: input.description?.trim() || null,
       image_url: input.image?.trim() || null, address: input.address.trim(),
       phone: input.phone.trim(), contact_person: input.contactPerson.trim(), status: input.status,
+      minimum_order_value: input.minimumOrderValue,
     }).select('*').single();
     if (error) throw new Error(`${error.code ?? 'DB_ERROR'}: ${error.message}`);
     if (!data) throw new Error('Supabase did not return the created store.');
@@ -201,6 +204,7 @@ export class SupabaseProviderDatabase {
       name: input.name.trim(), description: input.description?.trim() || null,
       image_url: input.image?.trim() || null, address: input.address.trim(),
       phone: input.phone.trim(), contact_person: input.contactPerson.trim(), status: input.status,
+      minimum_order_value: input.minimumOrderValue,
     }).eq('id', storeId).is('deleted_at', null).select('*').single();
     if (error) throw new Error(`${error.code ?? 'DB_ERROR'}: ${error.message}`);
     if (!data) throw new Error('Supabase did not return the updated store.');
@@ -241,6 +245,7 @@ export class SupabaseProviderDatabase {
       name: input.name.trim(), description: input.description?.trim() || null,
       image_url: input.image?.trim() || null, address: input.address.trim(),
       phone: input.phone.trim(), contact_person: input.contactPerson.trim(), status: input.status,
+      minimum_order_value: input.minimumOrderValue,
     }).select('*').single();
     if (error) throw new Error(`${error.code ?? 'DB_ERROR'}: ${error.message}`);
     if (!data) throw new Error('Supabase did not return the created manufacturer.');
@@ -254,6 +259,7 @@ export class SupabaseProviderDatabase {
       name: input.name.trim(), description: input.description?.trim() || null,
       image_url: input.image?.trim() || null, address: input.address.trim(),
       phone: input.phone.trim(), contact_person: input.contactPerson.trim(), status: input.status,
+      minimum_order_value: input.minimumOrderValue,
     }).eq('id', factoryId).is('deleted_at', null).select('*').single();
     if (error) throw new Error(`${error.code ?? 'DB_ERROR'}: ${error.message}`);
     if (!data) throw new Error('Supabase did not return the updated manufacturer.');
@@ -296,6 +302,51 @@ export class SupabaseProviderDatabase {
       name: String(row.name ?? ''), description: String(row.description ?? ''),
       image: String(row.image_url ?? ''), isActive: Boolean(row.is_active),
     }));
+  }
+
+  async getSpecialtyById(specialtyId: string): Promise<Specialty | undefined> {
+    const client = supabase;
+    if (!client) throw new Error('Supabase is not configured.');
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(specialtyId);
+    const column = isUuid ? 'id' : 'legacy_id';
+    const { data, error } = await client.from('specialties').select('id, legacy_id, name, description, image_url, is_active').eq(column, specialtyId).maybeSingle();
+    if (error) throw new Error(`${error.code ?? 'DB_ERROR'}: ${error.message}`);
+    return data ? {
+      id: String(data.id), legacyId: data.legacy_id ? String(data.legacy_id) : undefined,
+      name: String(data.name ?? ''), description: String(data.description ?? ''),
+      image: String(data.image_url ?? ''), isActive: Boolean(data.is_active),
+    } : undefined;
+  }
+
+  async getAvailableProducts(): Promise<Product[]> {
+    const client = supabase;
+    if (!client) throw new Error('Supabase is not configured.');
+    const [activeStores, activeManufacturers, productResult] = await Promise.all([
+      this.getStores(false),
+      this.getFactories(false),
+      client.from('provider_products').select('*').eq('is_available', true).gt('stock_quantity', 0).is('deleted_at', null).order('name'),
+    ]);
+    if (productResult.error) throw new Error(`${productResult.error.code ?? 'DB_ERROR'}: ${productResult.error.message}`);
+    const storeIds = new Set(activeStores.map((store) => store.id));
+    const manufacturerIds = new Set(activeManufacturers.map((manufacturer) => manufacturer.id));
+    return (productResult.data ?? [])
+      .filter((row) => row.store_id ? storeIds.has(String(row.store_id)) : manufacturerIds.has(String(row.manufacturer_id)))
+      .map((row) => this.mapProduct(row));
+  }
+
+  async getProductsBySpecialty(specialtyId: string): Promise<Product[]> {
+    const specialty = await this.getSpecialtyById(specialtyId);
+    if (!specialty) return [];
+    const client = supabase;
+    if (!client) throw new Error('Supabase is not configured.');
+    const { data, error } = await client.from('provider_products').select('*').eq('specialty_id', specialty.id).is('deleted_at', null).order('name');
+    if (error) throw new Error(`${error.code ?? 'DB_ERROR'}: ${error.message}`);
+    const [activeStores, activeManufacturers] = await Promise.all([this.getStores(false), this.getFactories(false)]);
+    const storeIds = new Set(activeStores.map((store) => store.id));
+    const manufacturerIds = new Set(activeManufacturers.map((manufacturer) => manufacturer.id));
+    return (data ?? [])
+      .filter((row) => row.store_id ? storeIds.has(String(row.store_id)) : manufacturerIds.has(String(row.manufacturer_id)))
+      .map((row) => this.mapProduct(row));
   }
 }
 

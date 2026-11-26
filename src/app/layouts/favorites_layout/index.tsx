@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import ProductCard from '../../components/product_card';
@@ -12,27 +12,69 @@ export default function FavoritesLayout({ onBack, onProductSelected }: { onBack:
   const { cart, addToCart, updateQuantity, favoriteProducts, toggleFavoriteProduct } = useAppState();
   const [query, setQuery] = useState('');
   const [sortMode, setSortMode] = useState<'none' | 'priceAsc' | 'priceDesc' | 'discount'>('none');
+  const [favoriteItems, setFavoriteItems] = useState<import('../../models/data_types').Product[]>([]);
+  const [storeLookup, setStoreLookup] = useState<Record<string, import('../../models/data_types').Store>>({});
+  const [manufacturerLookup, setManufacturerLookup] = useState<Record<string, import('../../models/data_types').Factory>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const favoriteItems = useMemo(() => {
-    const normalized = query.trim().replace(/\s+/g, ' ').toLowerCase();
-    let products = favoriteProducts
-      .map((productId) => database.getProductById(productId))
-      .filter((product) => Boolean(product)) as NonNullable<ReturnType<typeof database.getProductById>>[];
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const results = await Promise.all(favoriteProducts.map((productId) => database.getProductByIdAsync(productId)));
+        const products = results.filter((product): product is NonNullable<typeof product> => Boolean(product));
+        if (!active) return;
 
-    if (normalized) {
-      products = products.filter((product) => {
-        const name = product.name.toLowerCase().replace(/\s+/g, ' ').trim();
-        const dosage = (product.dosage ?? '').toLowerCase().replace(/\s+/g, '').trim();
-        const compactQuery = normalized.replace(/\s+/g, '');
-        return name.includes(normalized) || dosage.includes(compactQuery);
-      });
-    }
+        const storeIds = Array.from(new Set(products.filter((product) => product.sellerType === 'store').map((product) => product.sellerId)));
+        const manufacturerIds = Array.from(new Set(products.filter((product) => product.sellerType === 'manufacturer').map((product) => product.sellerId)));
+        const [stores, manufacturers] = await Promise.all([
+          Promise.all(storeIds.map((storeId) => database.getStoreByIdAsync(storeId))),
+          Promise.all(manufacturerIds.map((manufacturerId) => database.getFactoryByIdAsync(manufacturerId))),
+        ]);
+        if (!active) return;
 
-    if (sortMode === 'priceAsc') products = [...products].sort((left, right) => left.pharmacyPriceAfterDiscount - right.pharmacyPriceAfterDiscount);
-    if (sortMode === 'priceDesc') products = [...products].sort((left, right) => right.pharmacyPriceAfterDiscount - left.pharmacyPriceAfterDiscount);
-    if (sortMode === 'discount') products = [...products].sort((left, right) => right.discountPercentage - left.discountPercentage);
+        setFavoriteItems(products);
+        setStoreLookup(Object.fromEntries(stores.filter((store): store is import('../../models/data_types').Store => Boolean(store)).map((store) => [store.id, store])));
+        setManufacturerLookup(Object.fromEntries(manufacturers.filter((manufacturer): manufacturer is import('../../models/data_types').Factory => Boolean(manufacturer)).map((manufacturer) => [manufacturer.id, manufacturer])));
+      } catch (caught) {
+        if (active) setError(caught instanceof Error ? caught.message : 'Unable to load favorites.');
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    void load();
+    return () => { active = false; };
+  }, [database, favoriteProducts]);
+
+  const favoriteItemsSorted = useMemo(() => {
+    let products = [...favoriteItems];
+
+    if (sortMode === 'priceAsc') products.sort((left, right) => left.pharmacyPriceAfterDiscount - right.pharmacyPriceAfterDiscount);
+    if (sortMode === 'priceDesc') products.sort((left, right) => right.pharmacyPriceAfterDiscount - left.pharmacyPriceAfterDiscount);
+    if (sortMode === 'discount') products.sort((left, right) => right.discountPercentage - left.discountPercentage);
+
     return products;
-  }, [favoriteProducts, query, sortMode]);
+  }, [favoriteItems, sortMode]);
+
+  const filteredItems = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    return favoriteItemsSorted.filter((product) => {
+      const name = product.name.toLowerCase();
+      const dosage = (product.dosage ?? '').toLowerCase();
+      return name.includes(normalized) || dosage.includes(normalized);
+    });
+  }, [query, favoriteItemsSorted]);
+
+  if (loading) {
+    return <Text>Loading...</Text>;
+  }
+
+  if (error) {
+    return <Text>{error}</Text>;
+  }
 
   return (
     <View style={styles.container}>
@@ -52,17 +94,17 @@ export default function FavoritesLayout({ onBack, onProductSelected }: { onBack:
       </View>
 
       <FlatList
-        data={favoriteItems}
+        data={filteredItems}
         keyExtractor={(product) => product.id}
         contentContainerStyle={styles.list}
         ListEmptyComponent={<View style={styles.empty}><Ionicons name="heart-outline" size={42} color="#94A3B8" /><Text style={styles.emptyTitle}>No favorites found</Text><Text style={styles.emptyText}>Save provider-owned products to find them quickly here.</Text></View>}
         renderItem={({ item }) => {
           const cartItem = cart.find((entry) => entry.productId === item.id);
-          const store = item.sellerType === 'store' ? database.getStoreById(item.sellerId) : undefined;
-          const manufacturerName = item.sellerType === 'manufacturer' ? database.getFactoryById(item.sellerId)?.name : undefined;
+          const store = item.sellerType === 'store' ? storeLookup[item.sellerId] : undefined;
+          const manufacturerName = item.sellerType === 'manufacturer' ? manufacturerLookup[item.sellerId]?.name : undefined;
           const providerActive = item.sellerType === 'store'
-            ? database.getStoreById(item.sellerId)?.status === 'active'
-            : database.getFactoryById(item.sellerId)?.status === 'active';
+            ? storeLookup[item.sellerId]?.status === 'active'
+            : manufacturerLookup[item.sellerId]?.status === 'active';
           const unavailable = !item.isAvailable || item.stockQuantity <= 0 || !providerActive;
 
           return (

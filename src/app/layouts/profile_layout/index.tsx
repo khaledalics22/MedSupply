@@ -28,9 +28,9 @@ export default function ProfileLayout({
   const { favoriteStores } = useAppState();
   const { user, logout, updateProfile, changePassword } = useAuthState();
   const database = iocContainer.getDatabase();
-  const favoriteStoreItems = database
-    .getStores()
-    .filter((store) => favoriteStores.includes(store.id));
+  const [favoriteStoreItems, setFavoriteStoreItems] = useState<import('../../models/data_types').Store[]>([]);
+  const [favoriteStoresLoading, setFavoriteStoresLoading] = useState(true);
+  const [favoriteStoresError, setFavoriteStoresError] = useState('');
 
   const [editing, setEditing] = useState(false);
   const [fullName, setFullName] = useState(user?.fullName ?? "");
@@ -57,6 +57,24 @@ export default function ProfileLayout({
     setPharmacyName(user?.pharmacyName ?? "");
     setPharmacyAddress(user?.pharmacyAddress ?? "");
   }, [user]);
+
+  useEffect(() => {
+    let active = true;
+    const loadFavorites = async () => {
+      setFavoriteStoresLoading(true);
+      setFavoriteStoresError('');
+      try {
+        const stores = await Promise.all(favoriteStores.map((storeId) => database.getStoreByIdAsync(storeId)));
+        if (active) setFavoriteStoreItems(stores.filter((store): store is import('../../models/data_types').Store => Boolean(store)));
+      } catch (caught) {
+        if (active) setFavoriteStoresError(caught instanceof Error ? caught.message : 'Unable to load favorite stores.');
+      } finally {
+        if (active) setFavoriteStoresLoading(false);
+      }
+    };
+    void loadFavorites();
+    return () => { active = false; };
+  }, [database, favoriteStores]);
 
   const cancelEdit = () => {
     setFullName(user?.fullName ?? "");
@@ -263,7 +281,9 @@ export default function ProfileLayout({
 
         <View style={styles.panel}>
           <Text style={styles.sectionTitle}>Favorite Stores</Text>
-          {favoriteStoreItems.length === 0 ? (
+          {favoriteStoresLoading ? (
+            <Text style={styles.empty}>Loading favorite stores...</Text>
+          ) : favoriteStoreItems.length === 0 ? (
             <Text style={styles.empty}>No favorites yet.</Text>
           ) : (
             <FlatList
@@ -280,6 +300,9 @@ export default function ProfileLayout({
               )}
             />
           )}
+          {favoriteStoresError ? (
+            <Text style={styles.error}>{favoriteStoresError}</Text>
+          ) : null}
         </View>
 
         <TouchableOpacity

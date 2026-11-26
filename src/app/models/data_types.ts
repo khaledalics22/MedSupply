@@ -54,6 +54,7 @@ export interface Store extends Producer {
   rating?: number;
   contactPerson: string;
   status: StoreStatus;
+  minimumOrderValue: number;
 }
 
 export type ManufacturerStatus = 'active' | 'inactive';
@@ -64,6 +65,7 @@ export interface Factory extends Producer {
   productionCapacity: string;
   contactPerson: string;
   status: ManufacturerStatus;
+  minimumOrderValue: number;
 }
 
 export interface CartItem {
@@ -155,6 +157,7 @@ export interface StoreInput {
   description?: string;
   image?: string;
   status: StoreStatus;
+  minimumOrderValue: number;
 }
 
 export interface ManufacturerInput {
@@ -165,6 +168,7 @@ export interface ManufacturerInput {
   description?: string;
   image?: string;
   status: ManufacturerStatus;
+  minimumOrderValue: number;
 }
 
 export interface ProductInput {

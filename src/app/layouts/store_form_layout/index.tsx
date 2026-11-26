@@ -15,6 +15,7 @@ export default function StoreFormLayout({ storeId, onBack, onSaved }: { storeId?
   const [description, setDescription] = useState(store?.description ?? '');
   const [image, setImage] = useState(store?.image ?? '');
   const [status, setStatus] = useState<StoreStatus>(store?.status ?? 'active');
+  const [minimumOrderValue, setMinimumOrderValue] = useState(store?.minimumOrderValue?.toFixed(2) ?? '0.00');
   const [error, setError] = useState('');
   const [confirmSave, setConfirmSave] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -35,6 +36,7 @@ export default function StoreFormLayout({ storeId, onBack, onSaved }: { storeId?
         setDescription(item?.description ?? '');
         setImage(item?.image ?? '');
         setStatus(item?.status ?? 'active');
+        setMinimumOrderValue(item?.minimumOrderValue?.toFixed(2) ?? '0.00');
       })
       .catch((caught) => setError(caught instanceof Error ? caught.message : 'Unable to load store.'))
       .finally(() => { if (active) setLoading(false); });
@@ -46,6 +48,9 @@ export default function StoreFormLayout({ storeId, onBack, onSaved }: { storeId?
     if (!name.trim() || !contactPerson.trim() || !phone.trim() || !address.trim()) return 'Please complete all required fields.';
     const digits = phone.replace(/\D/g, '');
     if (digits.length < 7 || digits.length > 15) return 'Please enter a valid phone number.';
+    const minimum = Number(minimumOrderValue);
+    if (!minimumOrderValue.trim() || !Number.isFinite(minimum)) return 'Minimum Order Value must be a valid number.';
+    if (minimum < 0) return 'Minimum Order Value cannot be negative.';
     return '';
   };
 
@@ -56,7 +61,7 @@ export default function StoreFormLayout({ storeId, onBack, onSaved }: { storeId?
 
     setSaving(true);
     setError('');
-    const input: StoreInput = { name, contactPerson, phone, address, description, image, status };
+    const input: StoreInput = { name, contactPerson, phone, address, description, image, status, minimumOrderValue: Number(minimumOrderValue) };
     try {
       if (store) await iocContainer.getDatabase().updateStoreAsync(store.id, input);
       else await iocContainer.getDatabase().addStoreAsync(input);
@@ -89,6 +94,7 @@ export default function StoreFormLayout({ storeId, onBack, onSaved }: { storeId?
         <Field label="Address *" value={address} onChangeText={(value) => { setAddress(value); setError(''); }} placeholder="Store address" multiline />
         <Field label="Description" value={description} onChangeText={setDescription} placeholder="Optional description" multiline />
         <Field label="Logo / Image URL" value={image} onChangeText={setImage} placeholder="https://..." />
+        <Field label="Minimum Order Value (EGP) *" value={minimumOrderValue} onChangeText={(value) => { setMinimumOrderValue(value); setError(''); }} placeholder="0.00" keyboardType="decimal-pad" />
         <Text style={styles.label}>Status *</Text>
         <View style={styles.statusRow}>
           {(['active', 'inactive'] as StoreStatus[]).map((option) => (
@@ -118,6 +124,6 @@ export default function StoreFormLayout({ storeId, onBack, onSaved }: { storeId?
   );
 }
 
-function Field({ label, value, onChangeText, placeholder, multiline, keyboardType }: { label: string; value: string; onChangeText: (value: string) => void; placeholder: string; multiline?: boolean; keyboardType?: 'phone-pad' }) {
+function Field({ label, value, onChangeText, placeholder, multiline, keyboardType }: { label: string; value: string; onChangeText: (value: string) => void; placeholder: string; multiline?: boolean; keyboardType?: 'phone-pad' | 'decimal-pad' }) {
   return <View style={styles.field}><Text style={styles.label}>{label}</Text><TextInput value={value} onChangeText={onChangeText} placeholder={placeholder} style={[styles.input, multiline && styles.textArea]} multiline={multiline} keyboardType={keyboardType} /></View>;
 }

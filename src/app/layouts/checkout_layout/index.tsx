@@ -14,7 +14,7 @@ export default function CheckoutLayout({
   onBack: () => void;
   onComplete: () => void;
 }) {
-  const { cart, cartTotal, createOrder, orders, refreshCartPricing } = useAppState();
+  const { cart, cartMutating, cartTotal, createOrder, orders, refreshCartPricing } = useAppState();
   const [orderConfirmed, setOrderConfirmed] = useState(false);
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
   const [confirmVisible, setConfirmVisible] = useState(false);
@@ -31,31 +31,39 @@ export default function CheckoutLayout({
     else providerGroups.set(key, { name: item.sellerName, type: item.sellerType, items: [item] });
   });
 
-  const handleReview = () => {
-    if (cart.length === 0) return;
-    const changeIssues = refreshCartPricing();
-    setChangesReviewed(changeIssues.length === 0);
-    setIssues(changeIssues);
-    if (changeIssues.length === 0) setConfirmVisible(true);
+  const handleReview = async () => {
+    if (cartMutating || submittingRef.current || cart.length === 0) return;
+    try {
+      const changeIssues = await refreshCartPricing();
+      setChangesReviewed(changeIssues.length === 0);
+      setIssues(changeIssues);
+      if (changeIssues.length === 0) setConfirmVisible(true);
+    } catch (caught) {
+      setIssues([{ productId: '', productName: 'Cart', requestedQuantity: cart.length, currentStock: 0, reason: 'unavailable' }]);
+    }
   };
 
-  const handleConfirm = () => {
-    if (submittingRef.current || cart.length === 0) return;
+  const handleConfirm = async () => {
+    if (cartMutating || submittingRef.current || cart.length === 0) return;
     submittingRef.current = true;
     setSubmitting(true);
 
-    const result = createOrder();
-    if (result.success) {
-      setOrderConfirmed(true);
-      setCreatedOrderId(result.orderId ?? null);
-      setConfirmVisible(false);
-      setIssues([]);
+    try {
+      const result = await createOrder();
+      if (result.success) {
+        setOrderConfirmed(true);
+        setCreatedOrderId(result.orderId ?? null);
+        setConfirmVisible(false);
+        setIssues([]);
+      } else {
+        setIssues(result.issues);
+      }
+    } catch (caught) {
+      setIssues([{ productId: '', productName: 'Cart', requestedQuantity: cart.length, currentStock: 0, reason: 'unavailable' }]);
+    } finally {
       submittingRef.current = false;
-    } else {
-      setIssues(result.issues);
-      submittingRef.current = false;
+      setSubmitting(false);
     }
-    setSubmitting(false);
   };
 
   return (
@@ -111,7 +119,7 @@ export default function CheckoutLayout({
         </View>
       </View>
 
-      <TouchableOpacity activeOpacity={0.8} disabled={submitting || cart.length === 0 || orderConfirmed} onPress={handleReview} style={[styles.confirmButton, (submitting || cart.length === 0 || orderConfirmed) && styles.confirmButtonDisabled]}>
+      <TouchableOpacity activeOpacity={0.8} disabled={submitting || cartMutating || cart.length === 0 || orderConfirmed} onPress={handleReview} style={[styles.confirmButton, (submitting || cartMutating || cart.length === 0 || orderConfirmed) && styles.confirmButtonDisabled]}>
         <Text style={styles.confirmText}>{submitting ? 'Placing order...' : orderConfirmed ? 'Order placed' : 'Place Order'}</Text>
       </TouchableOpacity>
 
@@ -129,7 +137,7 @@ export default function CheckoutLayout({
             <Text style={styles.modalText}>All provider groups will be submitted as one order. Your cart will clear only after successful submission.</Text>
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.cancelButton} onPress={() => setConfirmVisible(false)}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity>
-              <TouchableOpacity style={styles.confirmButtonModal} onPress={handleConfirm} disabled={submitting}><Text style={styles.confirmText}>{submitting ? 'Placing...' : 'Confirm & Place Order'}</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.confirmButtonModal} onPress={handleConfirm} disabled={submitting || cartMutating}><Text style={styles.confirmText}>{submitting ? 'Placing...' : 'Confirm & Place Order'}</Text></TouchableOpacity>
             </View>
           </View>
         </View>

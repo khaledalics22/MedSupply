@@ -19,6 +19,7 @@ export default function ManufacturerFormLayout({ factoryId, onBack, onSaved }: {
   const [error, setError] = useState('');
   const [confirmSave, setConfirmSave] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [minimumOrderValue, setMinimumOrderValue] = useState(factory?.minimumOrderValue?.toFixed(2) ?? '0.00');
 
   useEffect(() => {
     if (!factoryId) { setLoading(false); return; }
@@ -35,6 +36,7 @@ export default function ManufacturerFormLayout({ factoryId, onBack, onSaved }: {
         setDescription(item?.description ?? '');
         setImage(item?.image ?? '');
         setStatus(item?.status ?? 'active');
+        setMinimumOrderValue(item?.minimumOrderValue?.toFixed(2) ?? '0.00');
       })
       .catch((caught) => setError(caught instanceof Error ? caught.message : 'Unable to load manufacturer.'))
       .finally(() => { if (active) setLoading(false); });
@@ -46,6 +48,9 @@ export default function ManufacturerFormLayout({ factoryId, onBack, onSaved }: {
     if (!name.trim() || !contactPerson.trim() || !phone.trim() || !address.trim()) return 'Please complete all required fields.';
     const digits = phone.replace(/\D/g, '');
     if (digits.length < 7 || digits.length > 15) return 'Please enter a valid phone number.';
+    const minimum = Number(minimumOrderValue);
+    if (!minimumOrderValue.trim() || !Number.isFinite(minimum)) return 'Minimum Order Value must be a valid number.';
+    if (minimum < 0) return 'Minimum Order Value cannot be negative.';
     return '';
   };
 
@@ -56,7 +61,7 @@ export default function ManufacturerFormLayout({ factoryId, onBack, onSaved }: {
 
     setSaving(true);
     setError('');
-    const input: ManufacturerInput = { name, contactPerson, phone, address, description, image, status };
+    const input: ManufacturerInput = { name, contactPerson, phone, address, description, image, status, minimumOrderValue: Number(minimumOrderValue) };
     try {
       if (factory) await iocContainer.getDatabase().updateFactoryAsync(factory.id, input);
       else await iocContainer.getDatabase().addFactoryAsync(input);
@@ -85,6 +90,7 @@ export default function ManufacturerFormLayout({ factoryId, onBack, onSaved }: {
         <Field label="Address *" value={address} onChangeText={setAddress} placeholder="Manufacturer address" multiline />
         <Field label="Description" value={description} onChangeText={setDescription} placeholder="Optional description" multiline />
         <Field label="Logo / Image URL" value={image} onChangeText={setImage} placeholder="https://..." />
+        <Field label="Minimum Order Value (EGP) *" value={minimumOrderValue} onChangeText={setMinimumOrderValue} placeholder="0.00" numeric />
         <Text style={styles.label}>Status *</Text>
         <View style={styles.statusRow}>
           {(['active', 'inactive'] as ManufacturerStatus[]).map((option) => (
@@ -105,6 +111,6 @@ export default function ManufacturerFormLayout({ factoryId, onBack, onSaved }: {
   );
 }
 
-function Field({ label, value, onChangeText, placeholder, multiline, phone }: { label: string; value: string; onChangeText: (value: string) => void; placeholder: string; multiline?: boolean; phone?: boolean }) {
-  return <View style={styles.field}><Text style={styles.label}>{label}</Text><TextInput value={value} onChangeText={onChangeText} placeholder={placeholder} style={[styles.input, multiline && styles.textArea]} multiline={multiline} keyboardType={phone ? 'phone-pad' : 'default'} /></View>;
+function Field({ label, value, onChangeText, placeholder, multiline, phone, numeric }: { label: string; value: string; onChangeText: (value: string) => void; placeholder: string; multiline?: boolean; phone?: boolean; numeric?: boolean }) {
+  return <View style={styles.field}><Text style={styles.label}>{label}</Text><TextInput value={value} onChangeText={onChangeText} placeholder={placeholder} style={[styles.input, multiline && styles.textArea]} multiline={multiline} keyboardType={phone ? 'phone-pad' : numeric ? 'decimal-pad' : 'default'} /></View>;
 }

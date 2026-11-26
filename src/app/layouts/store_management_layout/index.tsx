@@ -10,12 +10,14 @@ export default function StoreManagementLayout({ refreshToken = 0, onBack, onAddS
   const database = iocContainer.getDatabase();
   const [query, setQuery] = useState('');
   const [version, setVersion] = useState(0);
-  const [stores, setStores] = useState<Store[]>(database.getStores());
+  const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     let active = true;
+    setLoading(true);
+    setError('');
     iocContainer.getDatabase().getStoresAsync(true)
       .then((items) => { if (active) setStores(items); })
       .catch((caught) => { if (active) setError(caught instanceof Error ? caught.message : 'Unable to load stores'); })

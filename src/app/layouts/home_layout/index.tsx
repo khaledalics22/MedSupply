@@ -9,6 +9,7 @@ import { t, type LanguageCode } from "../../i18n";
 import { iocContainer } from "../../models/ioc_container";
 import { CategoryType } from "../../utils/types";
 import styles from "./styles";
+import type { Advertisement } from '../../components/advertisement_carousel';
 
 type HomeProps = {
   language: LanguageCode;
@@ -107,7 +108,7 @@ export default function Home({
       });
   }, [language, query]);
 
-  const advertisements = iocContainer.getDatabase().getAdvertisements();
+  const advertisements: Advertisement[] = [];
 
   return (
     <View style={styles.container}>

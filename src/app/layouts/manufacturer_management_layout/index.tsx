@@ -10,12 +10,14 @@ export default function ManufacturerManagementLayout({ refreshToken = 0, onBack,
   const database = iocContainer.getDatabase();
   const [query, setQuery] = useState('');
   const [, refresh] = useState(0);
-  const [manufacturers, setManufacturers] = useState<Factory[]>(database.getFactories());
+  const [manufacturers, setManufacturers] = useState<Factory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     let active = true;
+    setLoading(true);
+    setError('');
     iocContainer.getDatabase().getFactoriesAsync(true)
       .then((items) => { if (active) setManufacturers(items); })
       .catch((caught) => { if (active) setError(caught instanceof Error ? caught.message : 'Unable to load manufacturers'); })

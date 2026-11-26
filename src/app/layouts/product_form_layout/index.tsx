@@ -9,7 +9,8 @@ import styles from './styles';
 
 export default function ProductFormLayout({ providerType, providerId, product, onBack, onSaved }: { providerType: ProducerType; providerId: string; product?: Product; onBack: () => void; onSaved: (message: string) => void }) {
   const database = iocContainer.getDatabase();
-  const specialties = database.getSpecialties();
+  const [specialties, setSpecialties] = useState<import('../../models/data_types').Specialty[]>([]);
+  const [specialtiesLoading, setSpecialtiesLoading] = useState(true);
   const [name, setName] = useState(product?.name ?? '');
   const [dosage, setDosage] = useState(product?.dosage ?? '');
   const [description, setDescription] = useState(product?.description ?? '');
@@ -35,6 +36,23 @@ export default function ProductFormLayout({ providerType, providerId, product, o
     return () => { active = false; };
   }, [providerType, providerId]);
 
+  useEffect(() => {
+    let active = true;
+    database.getSpecialtiesAsync()
+      .then((items) => {
+        if (!active) return;
+        setSpecialties(items);
+        if (!product?.specialtyId && items.length > 0) {
+          setSpecialtyId(items[0].legacyId ?? items[0].id);
+        }
+      })
+      .catch((caught) => {
+        if (active) setError(caught instanceof Error ? caught.message : 'Unable to load specialties.');
+      })
+      .finally(() => { if (active) setSpecialtiesLoading(false); });
+    return () => { active = false; };
+  }, [database, product]);
+
   const price = calculatePharmacistPrice(Number(consumerPrice) || 0, Number(discount) || 0);
   const suggestions = useMemo(() => {
     const query = normalizeProductName(name);
@@ -43,6 +61,9 @@ export default function ProductFormLayout({ providerType, providerId, product, o
   }, [name, providerProducts]);
 
   const validate = () => {
+    if (specialtiesLoading) return 'Specialties are still loading. Please wait.';
+    if (specialties.length === 0) return 'No specialties are available. Add or restore specialties before creating a product.';
+    if (!specialtyId) return 'Please select a category.';
     if (!name.trim() || !dosage.trim() || !stock.trim() || !consumerPrice.trim()) return 'Please complete all required fields.';
     const consumer = Number(consumerPrice);
     const discountValue = Number(discount);
@@ -104,7 +125,8 @@ export default function ProductFormLayout({ providerType, providerId, product, o
         <Field label="Dosage *" value={dosage} onChangeText={(value) => { setDosage(value); setError(''); }} placeholder="e.g. 500 mg" />
         <Field label="Description" value={description} onChangeText={setDescription} placeholder="Optional description" multiline />
         <Text style={styles.label}>Category *</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categories}>{specialties.map((item) => <TouchableOpacity key={item.id} style={[styles.category, specialtyId === item.id && styles.categoryActive]} onPress={() => setSpecialtyId(item.id)}><Text style={[styles.categoryText, specialtyId === item.id && styles.categoryTextActive]}>{item.name}</Text></TouchableOpacity>)}</ScrollView>
+        {specialtiesLoading ? <Text style={styles.categoryText}>Loading specialties...</Text> : specialties.length === 0 ? <Text style={styles.categoryText}>No specialties available.</Text> : null}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categories}>{specialties.map((item) => { const selectionId = item.legacyId ?? item.id; return <TouchableOpacity key={item.id} style={[styles.category, (specialtyId === item.id || specialtyId === selectionId) && styles.categoryActive]} onPress={() => setSpecialtyId(selectionId)}><Text style={[styles.categoryText, (specialtyId === item.id || specialtyId === selectionId) && styles.categoryTextActive]}>{item.name}</Text></TouchableOpacity>; })}</ScrollView>
         <View style={styles.priceRow}><Field label="Consumer price *" value={consumerPrice} onChangeText={setConsumerPrice} placeholder="100" numeric />
           <Field label="Discount % *" value={discount} onChangeText={setDiscount} placeholder="20" numeric /></View>
         <View style={styles.calculated}><Text style={styles.calculatedLabel}>Pharmacist price</Text><Text style={styles.calculatedValue}>{price.toFixed(2)} EGP</Text></View>

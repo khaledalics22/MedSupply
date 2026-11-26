@@ -18,9 +18,12 @@ export abstract class Database {
   abstract getSpecialties(): Specialty[];
   abstract getSpecialtiesAsync(): Promise<Specialty[]>;
   abstract getSpecialtyById(specialtyId: string): Specialty | undefined;
+  abstract getSpecialtyByIdAsync(specialtyId: string): Promise<Specialty | undefined>;
   abstract getProducts(): Product[];
   abstract getAvailableProducts(): Product[];
+  abstract getAvailableProductsAsync(): Promise<Product[]>;
   abstract getProductsBySpecialty(specialtyId: string): Product[];
+  abstract getProductsBySpecialtyAsync(specialtyId: string): Promise<Product[]>;
   abstract getProductsByStore(storeId: string): Product[];
   abstract getProductsByManufacturer(manufacturerId: string): Product[];
   abstract getStores(): Store[];
@@ -87,16 +90,16 @@ export class MockDatabase extends Database {
   ];
 
   private stores: Store[] = [
-    { id: 'store-1', type: ProducerType.Store, name: 'العزبي', description: 'صيدلية متكاملة توصل الأدوية والمستلزمات', image: 'https://picsum.photos/seed/store-azaby/100', address: '12 شارع النيل، القاهرة', phone: '+20 2 1234 4400', contactPerson: 'Store Manager', status: 'active', openHours: '8:00 ص - 12:00 م', rating: 4.8 },
-    { id: 'store-2', type: ProducerType.Store, name: 'الشفاء', description: 'مكملات ومنتجات صحية وعناية يومية', image: 'https://picsum.photos/seed/store-shifa/100', address: '78 طريق المطار، الجيزة', phone: '+20 2 2345 1010', contactPerson: 'Store Manager', status: 'active', openHours: '9:00 ص - 11:00 م', rating: 4.6 },
-    { id: 'store-3', type: ProducerType.Store, name: 'الصحة', description: 'أدوية ومستحضرات عناية ومستلزمات طبية', image: 'https://picsum.photos/seed/store-seha/100', address: '45 شارع التحرير، القاهرة', phone: '+20 2 3456 5678', contactPerson: 'Store Manager', status: 'active', openHours: '8:00 ص - 12:00 م', rating: 4.7 },
-    { id: 'store-4', type: ProducerType.Store, name: 'الدواء', description: 'منتجات عشبية وطبيعية ومستلزمات منزلية', image: 'https://picsum.photos/seed/store-dawa/100', address: '23 شارع المسيد، الرياض', phone: '+966 55 345 6789', contactPerson: 'Store Manager', status: 'active', openHours: '9:00 ص - 10:00 م', rating: 4.5 },
+    { id: 'store-1', type: ProducerType.Store, minimumOrderValue: 0, name: 'العزبي', description: 'صيدلية متكاملة توصل الأدوية والمستلزمات', image: 'https://picsum.photos/seed/store-azaby/100', address: '12 شارع النيل، القاهرة', phone: '+20 2 1234 4400', contactPerson: 'Store Manager', status: 'active', openHours: '8:00 ص - 12:00 م', rating: 4.8 },
+    { id: 'store-2', type: ProducerType.Store, minimumOrderValue: 0, name: 'الشفاء', description: 'مكملات ومنتجات صحية وعناية يومية', image: 'https://picsum.photos/seed/store-shifa/100', address: '78 طريق المطار، الجيزة', phone: '+20 2 2345 1010', contactPerson: 'Store Manager', status: 'active', openHours: '9:00 ص - 11:00 م', rating: 4.6 },
+    { id: 'store-3', type: ProducerType.Store, minimumOrderValue: 0, name: 'الصحة', description: 'أدوية ومستحضرات عناية ومستلزمات طبية', image: 'https://picsum.photos/seed/store-seha/100', address: '45 شارع التحرير، القاهرة', phone: '+20 2 3456 5678', contactPerson: 'Store Manager', status: 'active', openHours: '8:00 ص - 12:00 م', rating: 4.7 },
+    { id: 'store-4', type: ProducerType.Store, minimumOrderValue: 0, name: 'الدواء', description: 'منتجات عشبية وطبيعية ومستلزمات منزلية', image: 'https://picsum.photos/seed/store-dawa/100', address: '23 شارع المسيد، الرياض', phone: '+966 55 345 6789', contactPerson: 'Store Manager', status: 'active', openHours: '9:00 ص - 10:00 م', rating: 4.5 },
   ];
 
   private factories: Factory[] = [
-    { id: 'factory-1', type: ProducerType.Manufacturer, name: 'فارما إيجيبت', description: 'إنتاج الأدوية الصيدلية والمعلبات', image: 'https://picsum.photos/seed/factory-farma-egypt/100', location: 'المنطقة الصناعية، العاشر', address: 'المنطقة الصناعية، العاشر', certification: 'GMP', productionCapacity: '3 مليون عبوة شهرياً', phone: '+20 55 888 1234', contactPerson: 'Manufacturing Manager', status: 'active' },
-    { id: 'factory-2', type: ProducerType.Manufacturer, name: 'نوفا هيلث', description: 'إنتاج المكملات والمنتجات الصحية', image: 'https://picsum.photos/seed/factory-nova-health/100', location: 'مدينة التقنية، الرياض', address: 'مدينة التقنية، الرياض', certification: 'ISO 13485', productionCapacity: '500 ألف وحدة شهرياً', phone: '+966 11 777 0909', contactPerson: 'Manufacturing Manager', status: 'active' },
-    { id: 'factory-3', type: ProducerType.Manufacturer, name: 'هيلث لابز', description: 'أجهزة قياس ومستلزمات طبية', image: 'https://picsum.photos/seed/factory-health-labs/100', location: 'المنطقة الصناعية، القاهرة', address: 'المنطقة الصناعية، القاهرة', certification: 'ISO 9001', productionCapacity: '1 مليون وحدة شهرياً', phone: '+20 11 666 1122', contactPerson: 'Manufacturing Manager', status: 'active' },
+    { id: 'factory-1', type: ProducerType.Manufacturer, minimumOrderValue: 0, name: 'فارما إيجيبت', description: 'إنتاج الأدوية الصيدلية والمعلبات', image: 'https://picsum.photos/seed/factory-farma-egypt/100', location: 'المنطقة الصناعية، العاشر', address: 'المنطقة الصناعية، العاشر', certification: 'GMP', productionCapacity: '3 مليون عبوة شهرياً', phone: '+20 55 888 1234', contactPerson: 'Manufacturing Manager', status: 'active' },
+    { id: 'factory-2', type: ProducerType.Manufacturer, minimumOrderValue: 0, name: 'نوفا هيلث', description: 'إنتاج المكملات والمنتجات الصحية', image: 'https://picsum.photos/seed/factory-nova-health/100', location: 'مدينة التقنية، الرياض', address: 'مدينة التقنية، الرياض', certification: 'ISO 13485', productionCapacity: '500 ألف وحدة شهرياً', phone: '+966 11 777 0909', contactPerson: 'Manufacturing Manager', status: 'active' },
+    { id: 'factory-3', type: ProducerType.Manufacturer, minimumOrderValue: 0, name: 'هيلث لابز', description: 'أجهزة قياس ومستلزمات طبية', image: 'https://picsum.photos/seed/factory-health-labs/100', location: 'المنطقة الصناعية، القاهرة', address: 'المنطقة الصناعية، القاهرة', certification: 'ISO 9001', productionCapacity: '1 مليون وحدة شهرياً', phone: '+20 11 666 1122', contactPerson: 'Manufacturing Manager', status: 'active' },
   ];
 
   private products: Product[] = [
@@ -150,6 +153,7 @@ export class MockDatabase extends Database {
   getSpecialties(): Specialty[] { return [...this.specialties]; }
   async getSpecialtiesAsync(): Promise<Specialty[]> { return [...this.specialties]; }
   getSpecialtyById(specialtyId: string): Specialty | undefined { return this.specialties.find((item) => item.id === specialtyId); }
+  async getSpecialtyByIdAsync(specialtyId: string): Promise<Specialty | undefined> { return this.getSpecialtyById(specialtyId); }
   getProducts(): Product[] { return [...this.products]; }
   getAvailableProducts(): Product[] {
     return this.products.filter((product) => {
@@ -165,7 +169,9 @@ export class MockDatabase extends Database {
       return true;
     });
   }
+  async getAvailableProductsAsync(): Promise<Product[]> { return this.getAvailableProducts(); }
   getProductsBySpecialty(specialtyId: string): Product[] { return this.products.filter((product) => product.specialtyId === specialtyId); }
+  async getProductsBySpecialtyAsync(specialtyId: string): Promise<Product[]> { return this.getProductsBySpecialty(specialtyId); }
   getProductsByStore(storeId: string): Product[] { return this.products.filter((product) => product.sellerType === ProducerType.Store && product.sellerId === storeId); }
   getProductsByManufacturer(manufacturerId: string): Product[] { return this.products.filter((product) => product.sellerType === ProducerType.Manufacturer && product.sellerId === manufacturerId); }
   getStores(): Store[] { return [...this.stores]; }
@@ -183,6 +189,7 @@ export class MockDatabase extends Database {
       status: input.status,
       rating: 0,
       openHours: 'Not specified',
+      minimumOrderValue: input.minimumOrderValue,
     };
     this.stores = [...this.stores, store];
     return { ...store };
@@ -199,6 +206,7 @@ export class MockDatabase extends Database {
       description: input.description?.trim() || 'No description available',
       image: input.image?.trim() || this.stores[index].image,
       status: input.status,
+      minimumOrderValue: input.minimumOrderValue,
     };
     this.stores = this.stores.map((store) => store.id === storeId ? updated : store);
     return { ...updated };
@@ -224,6 +232,7 @@ export class MockDatabase extends Database {
       phone: input.phone.trim(),
       contactPerson: input.contactPerson.trim(),
       status: input.status,
+      minimumOrderValue: input.minimumOrderValue,
       certification: 'Pending',
       productionCapacity: 'Not specified',
     };
@@ -243,6 +252,7 @@ export class MockDatabase extends Database {
       description: input.description?.trim() || 'No description available',
       image: input.image?.trim() || this.factories[index].image,
       status: input.status,
+      minimumOrderValue: input.minimumOrderValue,
     };
     this.factories = this.factories.map((factory) => factory.id === factoryId ? updated : factory);
     return { ...updated };

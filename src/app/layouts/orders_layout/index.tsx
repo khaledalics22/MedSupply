@@ -71,8 +71,8 @@ export default function OrdersLayout({ language, onBack }: { language: LanguageC
               </View>)}
             </View>;
           })}
-          <TouchableOpacity style={styles.reorderButton} onPress={() => {
-            const report = reorderOrder(selectedOrder.id);
+          <TouchableOpacity style={styles.reorderButton} onPress={async () => {
+            const report = await reorderOrder(selectedOrder.id);
             const parts: string[] = [];
             if (report.added.length) parts.push(`${report.added.reduce((sum, item) => sum + item.quantity, 0)} item(s) added`);
             if (report.limited.length) parts.push(`${report.limited.length} item(s) quantity-limited`);
