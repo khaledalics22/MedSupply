@@ -9,6 +9,8 @@ import type {
   Specialty,
   OrderCreationItem,
   OrderCreationResult,
+  Order,
+  OrderLineSnapshot,
 } from './data_types';
 import { ProducerType } from './data_types';
 import { calculatePharmacistPrice } from './database';
@@ -66,6 +68,59 @@ export class SupabaseProviderDatabase {
       expiryDate: row.expiry_date ? String(row.expiry_date) : undefined,
       consumerPrice, discountPercentage: discount, pharmacyPriceAfterDiscount: pharmacyPrice,
       stockQuantity: Number(row.stock_quantity ?? 0), isAvailable: Boolean(row.is_available),
+    };
+  }
+
+  private mapOrder(row: Record<string, unknown>): Order {
+    const items: OrderLineSnapshot[] = [];
+    const groups = Array.isArray(row.order_provider_groups) ? row.order_provider_groups : [];
+    const profileData = row.profiles;
+    const profile = Array.isArray(profileData) ? profileData[0] as Record<string, unknown> : profileData as Record<string, unknown> | undefined;
+
+    for (const rawGroup of groups) {
+      const group = rawGroup as Record<string, unknown>;
+      const itemRows = Array.isArray(group.order_items) ? group.order_items : [];
+      for (const rawItem of itemRows) {
+        const item = rawItem as Record<string, unknown>;
+        items.push({
+          productId: item.product_id ? String(item.product_id) : '',
+          productName: String(item.product_name ?? ''),
+          dosage: item.dosage ? String(item.dosage) : undefined,
+          packageSize: item.package_size ? String(item.package_size) : undefined,
+          variant: item.variant ? String(item.variant) : undefined,
+          sellerId: String(group.store_id ?? group.manufacturer_id ?? ''),
+          sellerName: String(group.provider_name ?? 'Unknown provider'),
+          sellerType: String(group.provider_type) === 'store' ? 'store' : 'manufacturer',
+          unitPrice: Number(item.final_unit_price ?? 0),
+          discountPercentage: Number(item.discount_percentage ?? 0),
+          quantity: Number(item.quantity ?? 0),
+          lineTotal: Number(item.line_subtotal_after_discount ?? 0),
+          consumerPrice: Number(item.consumer_unit_price ?? 0),
+          pharmacyPriceAfterDiscount: Number(item.final_unit_price ?? 0),
+          specialtyName: item.specialty_name ? String(item.specialty_name) : undefined,
+          minimumOrderValueSnapshot: Number(group.minimum_order_value_snapshot ?? 0),
+        });
+      }
+    }
+
+    return {
+      id: String(row.id),
+      customerName: profile?.full_name ? String(profile.full_name) : undefined,
+      pharmacistId: String(row.pharmacist_id),
+      pharmacyName: profile?.pharmacy_name ? String(profile.pharmacy_name) : undefined,
+      pharmacistEmail: profile?.email ? String(profile.email) : undefined,
+      pharmacistPhone: profile?.phone ? String(profile.phone) : undefined,
+      items,
+      totalItems: Number(row.total_quantity ?? 0),
+      totalDiscount: Number(row.discount_amount ?? 0),
+      totalPrice: Number(row.total_amount ?? 0),
+      status: String(row.status) as Order['status'],
+      createdAt: String(row.created_at ?? ''),
+      rejectionReason: row.rejection_reason ? String(row.rejection_reason) : undefined,
+      approvedAt: row.approved_at ? String(row.approved_at) : undefined,
+      rejectedAt: row.rejected_at ? String(row.rejected_at) : undefined,
+      completedAt: row.completed_at ? String(row.completed_at) : undefined,
+      stockDeducted: Boolean(row.stock_deducted),
     };
   }
 
@@ -351,12 +406,38 @@ export class SupabaseProviderDatabase {
       .map((row) => this.mapProduct(row));
   }
 
+  async getAllOrdersAsync(): Promise<Order[]> {
+    const client = supabase;
+    if (!client) throw new Error('Supabase is not configured.');
+    const { data, error } = await client.from('orders').select('*, profiles:pharmacist_id(full_name, pharmacy_name, email), order_provider_groups(*, order_items(*))').order('created_at', { ascending: false });
+    if (error) throw new Error(`${error.code ?? 'DB_ERROR'}: ${error.message}`);
+    return (data ?? []).map((row) => this.mapOrder(row));
+  }
+
+  async getOrderByIdAsync(orderId: string): Promise<Order | undefined> {
+    const client = supabase;
+    if (!client) throw new Error('Supabase is not configured.');
+    const { data, error } = await client.from('orders').select('*, profiles:pharmacist_id(full_name, pharmacy_name, email), order_provider_groups(*, order_items(*))').eq('id', orderId).maybeSingle();
+    if (error) throw new Error(`${error.code ?? 'DB_ERROR'}: ${error.message}`);
+    return data ? this.mapOrder(data) : undefined;
+  }
+
   async createOrderAsync(items: OrderCreationItem[]): Promise<OrderCreationResult> {
     const client = supabase;
     if (!client) throw new Error('Supabase is not configured.');
 
     const payload = items.map((item) => ({ product_id: item.productId, quantity: item.quantity }));
     const { data, error } = await client.rpc('create_order', { order_items_input: payload });
+
+    console.log('[MedSupply create_order] RPC response', {
+      hasError: Boolean(error),
+      errorCode: error?.code,
+      errorMessage: error?.message,
+      hasData: data != null,
+      dataType: Array.isArray(data) ? 'array' : typeof data,
+      dataKeys: data && typeof data === 'object' && !Array.isArray(data) ? Object.keys(data) : [],
+      returnedOrderId: data && typeof data === 'object' && 'order_id' in data ? data.order_id : null,
+    });
 
     if (error) throw new Error(`${error.code ?? 'DB_ERROR'}: ${error.message}`);
     if (!data) throw new Error('Supabase did not return an order creation result.');

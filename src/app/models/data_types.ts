@@ -103,6 +103,8 @@ export interface OrderLineSnapshot {
   lineTotal: number;
   consumerPrice?: number;
   pharmacyPriceAfterDiscount?: number;
+  specialtyName?: string;
+  minimumOrderValueSnapshot?: number;
 }
 
 export type OrderStatus = 'pending' | 'approved' | 'rejected' | 'completed';
@@ -126,6 +128,11 @@ export interface Order {
   rejectedAt?: string;
   completedAt?: string;
   stockDeducted?: boolean;
+  subtotalAmount?: number;
+  lineCount?: number;
+  pharmacyName?: string;
+  pharmacistEmail?: string;
+  pharmacistPhone?: string;
 }
 
 export interface Pharmacy {

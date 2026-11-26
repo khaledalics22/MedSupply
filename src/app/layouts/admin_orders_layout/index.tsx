@@ -1,16 +1,29 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo, useState } from 'react';
-import { FlatList, Modal, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import type { Order, OrderStatus } from '../../models/data_types';
 import { iocContainer } from '../../models/ioc_container';
-import { useAppState } from '../../state/app_state';
 import styles from './styles';
 
 export default function AdminOrdersLayout({ onBack, onOrderSelected, initialStatus }: { onBack: () => void; onOrderSelected: (orderId: string) => void; initialStatus?: 'all' | OrderStatus }) {
-  const { orders } = useAppState();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [refreshVersion, setRefreshVersion] = useState(0);
   const [statusFilter, setStatusFilter] = useState<'all' | OrderStatus>(initialStatus ?? 'all');
   const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError('');
+    iocContainer.getDatabase().getAllOrdersAsync()
+      .then((items) => { if (active) setOrders(items); })
+      .catch((caught) => { if (active) setError(caught instanceof Error ? caught.message : 'Unable to load orders.'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [refreshVersion]);
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -27,26 +40,29 @@ export default function AdminOrdersLayout({ onBack, onOrderSelected, initialStat
         <View style={styles.headerSpace} />
       </View>
       <View style={styles.searchRow}><Ionicons name="search" size={20} color="#718096" /><TextInput value={query} onChangeText={setQuery} placeholder="Search order ID or pharmacist" style={styles.searchInput} /></View>
+      {loading ? <Text style={styles.emptyText}>Loading orders...</Text> : error ? <View style={styles.empty}><Text style={styles.emptyTitle}>Unable to load orders</Text><Text style={styles.emptyText}>{error}</Text><TouchableOpacity style={styles.filter} onPress={() => setRefreshVersion((value) => value + 1)}><Text style={styles.filterText}>Retry</Text></TouchableOpacity></View> : null}
       <View style={styles.filters}>{(['all', 'pending', 'approved', 'rejected', 'completed'] as const).map((status) => {
         const count = status === 'all' ? orders.length : orders.filter((order) => order.status === status).length;
         return <TouchableOpacity key={status} style={[styles.filter, statusFilter === status && styles.filterActive]} onPress={() => setStatusFilter(status)}><Text style={[styles.filterText, statusFilter === status && styles.filterTextActive]}>{status === 'all' ? 'All Orders' : status} ({count})</Text></TouchableOpacity>;
       })}
         <TouchableOpacity style={styles.filter} onPress={() => { setStatusFilter('all'); setQuery(''); }}><Text style={styles.filterText}>Clear / Reset</Text></TouchableOpacity>
       </View>
-      <FlatList
-        data={filtered}
-        keyExtractor={(order) => order.id}
-        contentContainerStyle={styles.list}
-        ListEmptyComponent={<View style={styles.empty}><Ionicons name="receipt-outline" size={38} color="#94A3B8" /><Text style={styles.emptyTitle}>No orders found</Text><Text style={styles.emptyText}>Try another status or search value.</Text></View>}
-        renderItem={({ item }: { item: Order }) => (
-          <TouchableOpacity style={styles.card} onPress={() => onOrderSelected(item.id)} activeOpacity={0.8}>
-            <View style={styles.cardHeader}><Text style={styles.orderId}>{item.id}</Text><StatusBadge status={item.status} /></View>
-            <Text style={styles.customer}>{item.customerName ?? 'Pharmacist'}</Text>
-            <Text style={styles.meta}>{formatDate(item.createdAt)}</Text>
-            <View style={styles.cardFooter}><Text style={styles.meta}>{item.totalItems} item(s)</Text><Text style={styles.total}>{item.totalPrice.toFixed(2)} EGP</Text></View>
-          </TouchableOpacity>
-        )}
-      />
+      {error ? <Text style={{ color: 'red' }}>{error}</Text> : (
+        <FlatList
+          data={filtered}
+          keyExtractor={(order) => order.id}
+          contentContainerStyle={styles.list}
+          ListEmptyComponent={<View style={styles.empty}><Ionicons name="receipt-outline" size={38} color="#94A3B8" /><Text style={styles.emptyTitle}>No orders found</Text><Text style={styles.emptyText}>Try another status or search value.</Text></View>}
+          renderItem={({ item }: { item: Order }) => (
+            <TouchableOpacity style={styles.card} onPress={() => onOrderSelected(item.id)} activeOpacity={0.8}>
+              <View style={styles.cardHeader}><Text style={styles.orderId}>{item.id}</Text><StatusBadge status={item.status} /></View>
+              <Text style={styles.customer}>{item.customerName ?? 'Pharmacist'}</Text>
+              <Text style={styles.meta}>{formatDate(item.createdAt)}</Text>
+              <View style={styles.cardFooter}><Text style={styles.meta}>{item.totalItems} item(s)</Text><Text style={styles.total}>{item.totalPrice.toFixed(2)} EGP</Text></View>
+            </TouchableOpacity>
+          )}
+        />
+      )}
     </View>
   );
 }

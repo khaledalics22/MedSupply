@@ -13,6 +13,7 @@ import {
   type OrderLineSnapshot,
   type OrderCreationItem,
   type OrderCreationResult,
+  type Order,
 } from './data_types';
 
 export abstract class Database {
@@ -53,6 +54,8 @@ export abstract class Database {
   abstract validateOrderStock(lines: OrderLineSnapshot[]): string[];
   abstract approveAndDeductOrderStock(lines: OrderLineSnapshot[]): { success: boolean; errors: string[] };
   abstract createOrderAsync(items: OrderCreationItem[]): Promise<OrderCreationResult>;
+  abstract getAllOrdersAsync(): Promise<Order[]>;
+  abstract getOrderByIdAsync(orderId: string): Promise<Order | undefined>;
 
   abstract getStoresAsync(includeInactive?: boolean): Promise<Store[]>;
   abstract getActiveStoresAsync(): Promise<Store[]>;
@@ -468,6 +471,12 @@ export class MockDatabase extends Database {
   async createOrderAsync(items: OrderCreationItem[]): Promise<OrderCreationResult> {
     if (items.length === 0) throw new Error('At least one order item is required.');
     throw new Error('Mock order creation is unavailable. Use Supabase create_order in production.');
+  }
+  async getAllOrdersAsync(): Promise<Order[]> {
+    return [];
+  }
+  async getOrderByIdAsync(orderId: string): Promise<Order | undefined> {
+    return undefined;
   }
 
   // Async methods
