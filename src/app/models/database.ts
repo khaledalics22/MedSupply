@@ -315,7 +315,6 @@ export class MockDatabase extends Database {
     const product = this.getProductById(productId);
     if (!product || !product.isAvailable || product.stockQuantity < quantity) throw new Error('Product stock validation failed');
     product.stockQuantity -= quantity;
-    if (product.stockQuantity === 0) product.isAvailable = false;
   }
 
   findProviderProductDuplicate(providerType: ProducerType, providerId: string, name: string, dosage: string, excludeProductId?: string): Product | undefined {
@@ -363,7 +362,7 @@ export class MockDatabase extends Database {
       discountPercentage: roundCurrency(input.discountPercentage),
       pharmacyPriceAfterDiscount: calculatePharmacistPrice(input.consumerPrice, input.discountPercentage),
       stockQuantity: input.stockQuantity,
-      isAvailable: input.isAvailable && input.stockQuantity > 0,
+      isAvailable: input.isAvailable,
       expiryDate: input.expiryDate?.trim() || undefined,
     };
     this.products = [...this.products, product];

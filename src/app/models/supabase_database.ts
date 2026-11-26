@@ -174,7 +174,7 @@ export class SupabaseProviderDatabase {
       image_url: input.image?.trim() || null, dosage: input.dosage.trim().replace(/\s+/g, ' '),
       package_size: input.packageSize ?? null, variant: input.variant ?? null, expiry_date: input.expiryDate?.trim() || null,
       consumer_price: Number(input.consumerPrice), discount_percentage: Number(input.discountPercentage),
-      stock_quantity: Number(input.stockQuantity), is_available: input.isAvailable && Number(input.stockQuantity) > 0,
+      stock_quantity: Number(input.stockQuantity), is_available: input.isAvailable,
     };
     const { data, error } = await client.from('provider_products').insert(payload).select('*').single();
     if (error) throw new Error(`${error.code ?? 'DB_ERROR'}: ${error.message}`);
@@ -195,7 +195,7 @@ export class SupabaseProviderDatabase {
       dosage: input.dosage.trim().replace(/\s+/g, ' '), package_size: input.packageSize ?? null,
       variant: input.variant ?? null, expiry_date: input.expiryDate?.trim() || null,
       consumer_price: Number(input.consumerPrice), discount_percentage: Number(input.discountPercentage),
-      stock_quantity: Number(input.stockQuantity), is_available: input.isAvailable && Number(input.stockQuantity) > 0,
+      stock_quantity: Number(input.stockQuantity), is_available: input.isAvailable,
     }).eq('id', productId).is('deleted_at', null).select('*').single();
     if (error) throw new Error(`${error.code ?? 'DB_ERROR'}: ${error.message}`);
     if (!data) throw new Error('Supabase did not return the updated product.');
