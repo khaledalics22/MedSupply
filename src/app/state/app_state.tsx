@@ -198,74 +198,55 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   }> => enqueueCartMutation(async () => {
     if (cartRef.current.length === 0) return { success: false, issues: [] };
 
-    const database = iocContainer.getDatabase();
-    const issues: CheckoutValidationIssue[] = [];
-    const liveLines: Array<{ item: CartItem; product: import('../models/data_types').Product }> = [];
+    try {
+      const result = await iocContainer.getDatabase().createOrderAsync(
+        cartRef.current.map((item) => ({ productId: item.productId, quantity: item.quantity }))
+      );
 
-    for (const item of cartRef.current) {
-      const product = await database.getProductByIdAsync(item.productId);
-      if (!product) {
-        issues.push({ productId: item.productId, productName: item.productName, currentStock: 0, requestedQuantity: item.quantity, reason: 'unavailable' });
-        continue;
-      }
-      if (!product.isAvailable || product.stockQuantity <= 0) {
-        issues.push({ productId: item.productId, productName: item.productName, currentStock: product.stockQuantity, requestedQuantity: item.quantity, reason: 'inactive-product' });
-        continue;
-      }
+      const order: Order = {
+        id: result.orderId,
+        customerName: user?.fullName,
+        pharmacistId: user?.id,
+        items: cartRef.current.map((item) => ({
+          productId: item.productId,
+          productName: item.productName,
+          dosage: item.dosage,
+          packageSize: item.packageSize,
+          variant: item.variant,
+          sellerId: item.sellerId,
+          sellerName: item.sellerName,
+          sellerType: item.sellerType,
+          unitPrice: item.unitPrice,
+          discountPercentage: item.discountPercentage,
+          quantity: item.quantity,
+          lineTotal: item.unitPrice * item.quantity,
+          consumerPrice: item.consumerPrice,
+          pharmacyPriceAfterDiscount: item.unitPrice,
+        })),
+        totalItems: result.totalQuantity,
+        totalDiscount: result.discountAmount,
+        totalPrice: result.totalAmount,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+      };
 
-      const provider = product.sellerType === 'store'
-        ? await database.getStoreByIdAsync(product.sellerId)
-        : await database.getFactoryByIdAsync(product.sellerId);
-      if (!provider || provider.status !== 'active') {
-        issues.push({ productId: item.productId, productName: item.productName, currentStock: product.stockQuantity, requestedQuantity: item.quantity, reason: 'inactive-provider' });
-        continue;
-      }
-      if (product.stockQuantity < item.quantity) {
-        issues.push({ productId: item.productId, productName: item.productName, currentStock: product.stockQuantity, requestedQuantity: item.quantity, reason: 'insufficient-stock' });
-      }
-      if (item.consumerPrice !== undefined && item.consumerPrice !== product.consumerPrice) {
-        issues.push({ productId: item.productId, productName: item.productName, currentStock: product.stockQuantity, requestedQuantity: item.quantity, reason: 'price-change', oldConsumerPrice: item.consumerPrice, currentConsumerPrice: product.consumerPrice, oldPharmacistPrice: item.unitPrice, currentPharmacistPrice: product.pharmacyPriceAfterDiscount });
-      }
-      if (item.discountPercentage !== product.discountPercentage) {
-        issues.push({ productId: item.productId, productName: item.productName, currentStock: product.stockQuantity, requestedQuantity: item.quantity, reason: 'discount-change', oldDiscount: item.discountPercentage, currentDiscount: product.discountPercentage, oldPharmacistPrice: item.unitPrice, currentPharmacistPrice: product.pharmacyPriceAfterDiscount });
-      }
-      liveLines.push({ item, product });
+      setOrders((previous) => [order, ...previous]);
+      commitCart([]);
+      return { success: true, issues: [], orderId: result.orderId };
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : 'Unable to create order.';
+      return {
+        success: false,
+        issues: [{
+          productId: '',
+          productName: message,
+          currentStock: 0,
+          requestedQuantity: cartRef.current.reduce((sum, item) => sum + item.quantity, 0),
+          reason: 'unavailable',
+          message,
+        }],
+      };
     }
-
-    if (issues.length > 0) return { success: false, issues };
-
-    const lines: OrderLineSnapshot[] = liveLines.map(({ item, product }) => ({
-      productId: item.productId,
-      productName: product.name,
-      dosage: product.dosage,
-      packageSize: product.packageSize,
-      variant: product.variant,
-      sellerId: item.sellerId,
-      sellerName: item.sellerName,
-      sellerType: item.sellerType,
-      unitPrice: product.pharmacyPriceAfterDiscount,
-      discountPercentage: product.discountPercentage,
-      quantity: item.quantity,
-      lineTotal: product.pharmacyPriceAfterDiscount * item.quantity,
-      consumerPrice: product.consumerPrice,
-      pharmacyPriceAfterDiscount: product.pharmacyPriceAfterDiscount,
-    }));
-
-    const order: Order = {
-      id: `ORD-${Date.now()}`,
-      customerName: user?.fullName,
-      pharmacistId: user?.id,
-      items: lines,
-      totalItems: lines.reduce((sum, line) => sum + line.quantity, 0),
-      totalDiscount: 0,
-      totalPrice: lines.reduce((sum, line) => sum + line.lineTotal, 0),
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-    };
-
-    setOrders((previous) => [order, ...previous]);
-    commitCart([]);
-    return { success: true, issues: [], orderId: order.id };
   });
 
   const markNotificationRead = (id: string) => {

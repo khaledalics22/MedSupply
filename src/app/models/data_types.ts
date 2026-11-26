@@ -200,6 +200,7 @@ export interface CheckoutValidationIssue {
   currentPharmacistPrice?: number;
   oldDiscount?: number;
   currentDiscount?: number;
+  message?: string;
 }
 
 export interface OrderCreationItem {
