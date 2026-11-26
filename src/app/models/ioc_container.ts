@@ -87,6 +87,9 @@ class ProviderAwareDatabase extends Database {
   updateFactoryAsync(factoryId: string, input: any) { return this.supabaseProviders.updateFactory(factoryId, input); }
   setFactoryStatusAsync(factoryId: string, status: 'active' | 'inactive') { return this.supabaseProviders.setFactoryStatus(factoryId, status); }
   createOrderAsync(items: any[]) { return this.supabaseProviders.createOrderAsync(items); }
+  approveOrderAsync(orderId: string) { return this.supabaseProviders.approveOrderAsync(orderId); }
+  rejectOrderAsync(orderId: string) { return this.supabaseProviders.rejectOrderAsync(orderId); }
+  completeOrderAsync(orderId: string) { return this.supabaseProviders.completeOrderAsync(orderId); }
   getAllOrdersAsync() { return this.supabaseProviders.getAllOrdersAsync(); }
   getOrderByIdAsync(orderId: string) { return this.supabaseProviders.getOrderByIdAsync(orderId); }
 }

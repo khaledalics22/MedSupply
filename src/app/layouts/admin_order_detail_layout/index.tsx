@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import type { Order, OrderLineSnapshot } from '../../models/data_types';
 import { iocContainer } from '../../models/ioc_container';
+import { useAppState } from '../../state/app_state';
 import styles from './styles';
 
 export default function AdminOrderDetailLayout({ orderId, onBack }: { orderId: string; onBack: () => void }) {
@@ -11,6 +12,11 @@ export default function AdminOrderDetailLayout({ orderId, onBack }: { orderId: s
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [refreshVersion, setRefreshVersion] = useState(0);
+  const [actionType, setActionType] = useState<'approve' | 'reject' | 'complete' | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [actionError, setActionError] = useState('');
+  const [actionFeedback, setActionFeedback] = useState('');
+  const { approveOrder, rejectOrder, completeOrder } = useAppState();
 
   useEffect(() => {
     let active = true;
@@ -38,10 +44,36 @@ export default function AdminOrderDetailLayout({ orderId, onBack }: { orderId: s
   if (error) return <View style={styles.container}><View style={styles.header}><TouchableOpacity style={styles.backButton} onPress={onBack}><Ionicons name="arrow-back" size={20} color="#FFFFFF" /></TouchableOpacity><Text style={styles.title}>Unable to load order</Text></View><View style={{ padding: 16 }}><Text style={styles.errorText}>{error}</Text><TouchableOpacity style={styles.cancelButton} onPress={() => setRefreshVersion((value) => value + 1)}><Text style={styles.cancelText}>Retry</Text></TouchableOpacity></View></View>;
   if (!order) return <View style={styles.container}><View style={styles.header}><TouchableOpacity style={styles.backButton} onPress={onBack}><Ionicons name="arrow-back" size={20} color="#FFFFFF" /></TouchableOpacity><Text style={styles.title}>Order not found</Text></View></View>;
 
+  const submitAction = async () => {
+    if (!actionType || submitting) return;
+    setSubmitting(true);
+    setActionError('');
+    setActionFeedback('');
+    const selectedAction = actionType;
+    try {
+      const result = selectedAction === 'approve'
+        ? await approveOrder(order.id)
+        : selectedAction === 'reject'
+          ? await rejectOrder(order.id)
+          : await completeOrder(order.id);
+      if (!result.success) {
+        setActionError(result.errors.join('\n'));
+        return;
+      }
+      setActionType(null);
+      setActionFeedback(selectedAction === 'approve' ? 'Order approved successfully.' : selectedAction === 'reject' ? 'Order rejected successfully.' : 'Order completed successfully.');
+      setRefreshVersion((value) => value + 1);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}><TouchableOpacity style={styles.backButton} onPress={onBack}><Ionicons name="arrow-back" size={20} color="#FFFFFF" /></TouchableOpacity><Text style={styles.title}>Order Details</Text><View style={styles.headerSpace} /></View>
       <ScrollView contentContainerStyle={styles.content}>
+        {actionFeedback ? <Text style={styles.feedback}>{actionFeedback}</Text> : null}
+        {actionError ? <View style={styles.errorBox}><Text style={styles.errorText}>{actionError}</Text></View> : null}
         <View style={styles.infoCard}>
           <Text style={styles.orderId}>{order.id}</Text>
           <Text style={styles.status}>{order.status}</Text>
@@ -82,7 +114,28 @@ export default function AdminOrderDetailLayout({ orderId, onBack }: { orderId: s
             </View>)}
           </View>;
         })}
+
+        {order.status === 'pending' ? <View style={styles.actions}>
+          <TouchableOpacity style={styles.rejectButton} disabled={submitting} onPress={() => { setActionError(''); setActionFeedback(''); setActionType('reject'); }}><Text style={styles.rejectText}>Reject Order</Text></TouchableOpacity>
+          <TouchableOpacity style={styles.approveButton} disabled={submitting} onPress={() => { setActionError(''); setActionFeedback(''); setActionType('approve'); }}><Text style={styles.approveText}>Approve Order</Text></TouchableOpacity>
+        </View> : null}
+        {order.status === 'approved' ? <View style={styles.actions}>
+          <TouchableOpacity style={styles.approveButton} disabled={submitting} onPress={() => { setActionError(''); setActionFeedback(''); setActionType('complete'); }}><Text style={styles.approveText}>Complete Order</Text></TouchableOpacity>
+        </View> : null}
       </ScrollView>
+
+      <Modal visible={actionType !== null} transparent animationType="fade" onRequestClose={() => { if (!submitting) setActionType(null); }}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>{actionType === 'approve' ? 'Approve entire order?' : actionType === 'reject' ? 'Reject entire order?' : 'Complete entire order?'}</Text>
+            <Text style={styles.modalText}>{actionType === 'approve' ? 'The persisted order status will become approved. Stock will not change.' : actionType === 'reject' ? 'The persisted order status will become rejected. Stock will not be restored.' : 'The persisted order status will become completed. Stock will not change.'}</Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.cancelButton} disabled={submitting} onPress={() => setActionType(null)}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity>
+              <TouchableOpacity style={actionType === 'reject' ? styles.confirmReject : actionType === 'complete' ? styles.confirmComplete : styles.confirmApprove} disabled={submitting} onPress={() => void submitAction()}><Text style={styles.confirmText}>{submitting ? 'Submitting...' : actionType === 'approve' ? 'Approve' : actionType === 'reject' ? 'Reject' : 'Complete'}</Text></TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

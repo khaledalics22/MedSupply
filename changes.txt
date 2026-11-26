@@ -1,0 +1,365 @@
+diff --git a/src/app/layouts/admin_layout/index.tsx b/src/app/layouts/admin_layout/index.tsx
+index 6debb61..adce00b 100755
+--- a/src/app/layouts/admin_layout/index.tsx
++++ b/src/app/layouts/admin_layout/index.tsx
+@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react';
+ import { iocContainer } from '../../models/ioc_container';
+ import { getStockStatus } from '../../models/database';
+ import { authService } from '../../models/auth_service';
+-import { useAppState } from '../../state/app_state';
+ import { useAuthState } from '../../state/auth_state';
+ import styles from './styles';
+ 
+@@ -40,12 +39,12 @@ export default function AdminLayout({ onStoreManagement, onAddStore, onManufactu
+   onPharmacists: (status?: 'all' | 'pending' | 'active' | 'rejected' | 'inactive') => void;
+ }) {
+   const { user, logout } = useAuthState();
+-  const { orders } = useAppState();
+   const database = iocContainer.getDatabase();
+   const [pharmacists, setPharmacists] = useState<import('../../models/auth').User[]>([]);
+   const [stores, setStores] = useState<import('../../models/data_types').Store[]>([]);
+   const [manufacturers, setManufacturers] = useState<import('../../models/data_types').Factory[]>([]);
+   const [products, setProducts] = useState<import('../../models/data_types').Product[]>([]);
++  const [orders, setOrders] = useState<import('../../models/data_types').Order[]>([]);
+   const [dashboardLoading, setDashboardLoading] = useState(true);
+   const [dashboardError, setDashboardError] = useState('');
+   const [dashboardRefresh, setDashboardRefresh] = useState(0);
+@@ -85,10 +84,11 @@ export default function AdminLayout({ onStoreManagement, onAddStore, onManufactu
+       setDashboardLoading(true);
+       setDashboardError('');
+       try {
+-        const [storeItems, manufacturerItems, pharmacistItems] = await Promise.all([
++        const [storeItems, manufacturerItems, pharmacistItems, orderItems] = await Promise.all([
+           database.getStoresAsync(true),
+           database.getFactoriesAsync(true),
+           authService.getPharmacists(),
++          database.getAllOrdersAsync(),
+         ]);
+         const [storeProducts, manufacturerProducts] = await Promise.all([
+           Promise.all(storeItems.map((store) => database.getProductsByStoreAsync(store.id))),
+@@ -100,6 +100,7 @@ export default function AdminLayout({ onStoreManagement, onAddStore, onManufactu
+         setStores(storeItems);
+         setManufacturers(manufacturerItems);
+         setPharmacists(pharmacistItems);
++        setOrders(orderItems);
+         setProducts(Array.from(new Map(combinedProducts.map((product) => [product.id, product])).values()));
+       } catch (caught) {
+         if (active) setDashboardError(caught instanceof Error ? caught.message : 'Unable to load dashboard statistics.');
+diff --git a/src/app/layouts/admin_order_detail_layout/index.tsx b/src/app/layouts/admin_order_detail_layout/index.tsx
+index 3dd7f73..d37b7f7 100644
+--- a/src/app/layouts/admin_order_detail_layout/index.tsx
++++ b/src/app/layouts/admin_order_detail_layout/index.tsx
+@@ -1,9 +1,10 @@
+ import { Ionicons } from '@expo/vector-icons';
+ import { useEffect, useMemo, useState } from 'react';
+-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
++import { Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+ 
+ import type { Order, OrderLineSnapshot } from '../../models/data_types';
+ import { iocContainer } from '../../models/ioc_container';
++import { useAppState } from '../../state/app_state';
+ import styles from './styles';
+ 
+ export default function AdminOrderDetailLayout({ orderId, onBack }: { orderId: string; onBack: () => void }) {
+@@ -11,6 +12,11 @@ export default function AdminOrderDetailLayout({ orderId, onBack }: { orderId: s
+   const [loading, setLoading] = useState(true);
+   const [error, setError] = useState('');
+   const [refreshVersion, setRefreshVersion] = useState(0);
++  const [actionType, setActionType] = useState<'approve' | 'reject' | 'complete' | null>(null);
++  const [submitting, setSubmitting] = useState(false);
++  const [actionError, setActionError] = useState('');
++  const [actionFeedback, setActionFeedback] = useState('');
++  const { approveOrder, rejectOrder, completeOrder } = useAppState();
+ 
+   useEffect(() => {
+     let active = true;
+@@ -38,10 +44,36 @@ export default function AdminOrderDetailLayout({ orderId, onBack }: { orderId: s
+   if (error) return <View style={styles.container}><View style={styles.header}><TouchableOpacity style={styles.backButton} onPress={onBack}><Ionicons name="arrow-back" size={20} color="#FFFFFF" /></TouchableOpacity><Text style={styles.title}>Unable to load order</Text></View><View style={{ padding: 16 }}><Text style={styles.errorText}>{error}</Text><TouchableOpacity style={styles.cancelButton} onPress={() => setRefreshVersion((value) => value + 1)}><Text style={styles.cancelText}>Retry</Text></TouchableOpacity></View></View>;
+   if (!order) return <View style={styles.container}><View style={styles.header}><TouchableOpacity style={styles.backButton} onPress={onBack}><Ionicons name="arrow-back" size={20} color="#FFFFFF" /></TouchableOpacity><Text style={styles.title}>Order not found</Text></View></View>;
+ 
++  const submitAction = async () => {
++    if (!actionType || submitting) return;
++    setSubmitting(true);
++    setActionError('');
++    setActionFeedback('');
++    const selectedAction = actionType;
++    try {
++      const result = selectedAction === 'approve'
++        ? await approveOrder(order.id)
++        : selectedAction === 'reject'
++          ? await rejectOrder(order.id)
++          : await completeOrder(order.id);
++      if (!result.success) {
++        setActionError(result.errors.join('\n'));
++        return;
++      }
++      setActionType(null);
++      setActionFeedback(selectedAction === 'approve' ? 'Order approved successfully.' : selectedAction === 'reject' ? 'Order rejected successfully.' : 'Order completed successfully.');
++      setRefreshVersion((value) => value + 1);
++    } finally {
++      setSubmitting(false);
++    }
++  };
++
+   return (
+     <View style={styles.container}>
+       <View style={styles.header}><TouchableOpacity style={styles.backButton} onPress={onBack}><Ionicons name="arrow-back" size={20} color="#FFFFFF" /></TouchableOpacity><Text style={styles.title}>Order Details</Text><View style={styles.headerSpace} /></View>
+       <ScrollView contentContainerStyle={styles.content}>
++        {actionFeedback ? <Text style={styles.feedback}>{actionFeedback}</Text> : null}
++        {actionError ? <View style={styles.errorBox}><Text style={styles.errorText}>{actionError}</Text></View> : null}
+         <View style={styles.infoCard}>
+           <Text style={styles.orderId}>{order.id}</Text>
+           <Text style={styles.status}>{order.status}</Text>
+@@ -82,7 +114,28 @@ export default function AdminOrderDetailLayout({ orderId, onBack }: { orderId: s
+             </View>)}
+           </View>;
+         })}
++
++        {order.status === 'pending' ? <View style={styles.actions}>
++          <TouchableOpacity style={styles.rejectButton} disabled={submitting} onPress={() => { setActionError(''); setActionFeedback(''); setActionType('reject'); }}><Text style={styles.rejectText}>Reject Order</Text></TouchableOpacity>
++          <TouchableOpacity style={styles.approveButton} disabled={submitting} onPress={() => { setActionError(''); setActionFeedback(''); setActionType('approve'); }}><Text style={styles.approveText}>Approve Order</Text></TouchableOpacity>
++        </View> : null}
++        {order.status === 'approved' ? <View style={styles.actions}>
++          <TouchableOpacity style={styles.approveButton} disabled={submitting} onPress={() => { setActionError(''); setActionFeedback(''); setActionType('complete'); }}><Text style={styles.approveText}>Complete Order</Text></TouchableOpacity>
++        </View> : null}
+       </ScrollView>
++
++      <Modal visible={actionType !== null} transparent animationType="fade" onRequestClose={() => { if (!submitting) setActionType(null); }}>
++        <View style={styles.modalBackdrop}>
++          <View style={styles.modalCard}>
++            <Text style={styles.modalTitle}>{actionType === 'approve' ? 'Approve entire order?' : actionType === 'reject' ? 'Reject entire order?' : 'Complete entire order?'}</Text>
++            <Text style={styles.modalText}>{actionType === 'approve' ? 'The persisted order status will become approved. Stock will not change.' : actionType === 'reject' ? 'The persisted order status will become rejected. Stock will not be restored.' : 'The persisted order status will become completed. Stock will not change.'}</Text>
++            <View style={styles.modalActions}>
++              <TouchableOpacity style={styles.cancelButton} disabled={submitting} onPress={() => setActionType(null)}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity>
++              <TouchableOpacity style={actionType === 'reject' ? styles.confirmReject : actionType === 'complete' ? styles.confirmComplete : styles.confirmApprove} disabled={submitting} onPress={() => void submitAction()}><Text style={styles.confirmText}>{submitting ? 'Submitting...' : actionType === 'approve' ? 'Approve' : actionType === 'reject' ? 'Reject' : 'Complete'}</Text></TouchableOpacity>
++            </View>
++          </View>
++        </View>
++      </Modal>
+     </View>
+   );
+ }
+diff --git a/src/app/models/data_types.ts b/src/app/models/data_types.ts
+index 6e45cd8..92e28c3 100755
+--- a/src/app/models/data_types.ts
++++ b/src/app/models/data_types.ts
+@@ -223,4 +223,9 @@ export interface OrderCreationResult {
+   discountAmount: number;
+   totalAmount: number;
+   status: 'pending';
++}
++
++export interface OrderActionResult {
++  orderId: string;
++  status: 'approved' | 'rejected' | 'completed';
+ }
+\ No newline at end of file
+diff --git a/src/app/models/database.ts b/src/app/models/database.ts
+index 201b301..1d5a024 100755
+--- a/src/app/models/database.ts
++++ b/src/app/models/database.ts
+@@ -13,6 +13,7 @@ import {
+   type OrderLineSnapshot,
+   type OrderCreationItem,
+   type OrderCreationResult,
++  type OrderActionResult,
+   type Order,
+ } from './data_types';
+ 
+@@ -56,6 +57,9 @@ export abstract class Database {
+   abstract createOrderAsync(items: OrderCreationItem[]): Promise<OrderCreationResult>;
+   abstract getAllOrdersAsync(): Promise<Order[]>;
+   abstract getOrderByIdAsync(orderId: string): Promise<Order | undefined>;
++  abstract approveOrderAsync(orderId: string): Promise<OrderActionResult>;
++  abstract rejectOrderAsync(orderId: string): Promise<OrderActionResult>;
++  abstract completeOrderAsync(orderId: string): Promise<OrderActionResult>;
+ 
+   abstract getStoresAsync(includeInactive?: boolean): Promise<Store[]>;
+   abstract getActiveStoresAsync(): Promise<Store[]>;
+@@ -478,6 +482,15 @@ export class MockDatabase extends Database {
+   async getOrderByIdAsync(orderId: string): Promise<Order | undefined> {
+     return undefined;
+   }
++  async approveOrderAsync(orderId: string): Promise<OrderActionResult> {
++    throw new Error('Mock order approval is unavailable. Use Supabase approve_order in production.');
++  }
++  async rejectOrderAsync(orderId: string): Promise<OrderActionResult> {
++    throw new Error('Mock order rejection is unavailable. Use Supabase reject_order in production.');
++  }
++  async completeOrderAsync(orderId: string): Promise<OrderActionResult> {
++    throw new Error('Mock order completion is unavailable. Use Supabase complete_order in production.');
++  }
+ 
+   // Async methods
+   async getStoresAsync(includeInactive?: boolean): Promise<Store[]> {
+diff --git a/src/app/models/ioc_container.ts b/src/app/models/ioc_container.ts
+index 3922dd6..af4b98d 100755
+--- a/src/app/models/ioc_container.ts
++++ b/src/app/models/ioc_container.ts
+@@ -87,6 +87,9 @@ class ProviderAwareDatabase extends Database {
+   updateFactoryAsync(factoryId: string, input: any) { return this.supabaseProviders.updateFactory(factoryId, input); }
+   setFactoryStatusAsync(factoryId: string, status: 'active' | 'inactive') { return this.supabaseProviders.setFactoryStatus(factoryId, status); }
+   createOrderAsync(items: any[]) { return this.supabaseProviders.createOrderAsync(items); }
++  approveOrderAsync(orderId: string) { return this.supabaseProviders.approveOrderAsync(orderId); }
++  rejectOrderAsync(orderId: string) { return this.supabaseProviders.rejectOrderAsync(orderId); }
++  completeOrderAsync(orderId: string) { return this.supabaseProviders.completeOrderAsync(orderId); }
+   getAllOrdersAsync() { return this.supabaseProviders.getAllOrdersAsync(); }
+   getOrderByIdAsync(orderId: string) { return this.supabaseProviders.getOrderByIdAsync(orderId); }
+ }
+diff --git a/src/app/models/supabase_database.ts b/src/app/models/supabase_database.ts
+index 614395a..5a9a5ab 100644
+--- a/src/app/models/supabase_database.ts
++++ b/src/app/models/supabase_database.ts
+@@ -9,6 +9,7 @@ import type {
+   Specialty,
+   OrderCreationItem,
+   OrderCreationResult,
++  OrderActionResult,
+   Order,
+   OrderLineSnapshot,
+ } from './data_types';
+@@ -124,6 +125,18 @@ export class SupabaseProviderDatabase {
+     };
+   }
+ 
++  private mapOrderActionResult(data: unknown, expectedStatus: 'approved' | 'rejected' | 'completed'): OrderActionResult {
++    if (!data || typeof data !== 'object' || Array.isArray(data)) {
++      throw new Error('Supabase did not return a valid order action result.');
++    }
++    const result = data as Record<string, unknown>;
++    const orderId = typeof result.order_id === 'string' ? result.order_id.trim() : '';
++    const status = result.status;
++    if (!orderId) throw new Error('Supabase did not return a valid order ID.');
++    if (status !== expectedStatus) throw new Error(`Unexpected order action status: ${String(status)}.`);
++    return { orderId, status: expectedStatus };
++  }
++
+   async getProductsByStore(storeId: string): Promise<Product[]> {
+     const client = supabase;
+     if (!client) throw new Error('Supabase is not configured.');
+@@ -452,6 +465,30 @@ export class SupabaseProviderDatabase {
+       status: 'pending',
+     };
+   }
++
++  async approveOrderAsync(orderId: string): Promise<OrderActionResult> {
++    const client = supabase;
++    if (!client) throw new Error('Supabase is not configured.');
++    const { data, error } = await client.rpc('approve_order', { target_order_id: orderId });
++    if (error) throw new Error(`${error.code ?? 'DB_ERROR'}: ${error.message}`);
++    return this.mapOrderActionResult(data, 'approved');
++  }
++
++  async rejectOrderAsync(orderId: string): Promise<OrderActionResult> {
++    const client = supabase;
++    if (!client) throw new Error('Supabase is not configured.');
++    const { data, error } = await client.rpc('reject_order', { target_order_id: orderId });
++    if (error) throw new Error(`${error.code ?? 'DB_ERROR'}: ${error.message}`);
++    return this.mapOrderActionResult(data, 'rejected');
++  }
++
++  async completeOrderAsync(orderId: string): Promise<OrderActionResult> {
++    const client = supabase;
++    if (!client) throw new Error('Supabase is not configured.');
++    const { data, error } = await client.rpc('complete_order', { target_order_id: orderId });
++    if (error) throw new Error(`${error.code ?? 'DB_ERROR'}: ${error.message}`);
++    return this.mapOrderActionResult(data, 'completed');
++  }
+ }
+ 
+ export const supabaseProviderDatabase = new SupabaseProviderDatabase();
+diff --git a/src/app/state/app_state.tsx b/src/app/state/app_state.tsx
+index 74b13a7..8ccd3cd 100755
+--- a/src/app/state/app_state.tsx
++++ b/src/app/state/app_state.tsx
+@@ -25,9 +25,9 @@ type AppStateContextValue = {
+   createOrder: () => Promise<{ success: boolean; issues: CheckoutValidationIssue[]; orderId?: string }>;
+   favoriteStores: string[];
+   toggleFavoriteStore: (storeId: string) => void;
+-  approveOrder: (orderId: string) => { success: boolean; errors: string[] };
+-  rejectOrder: (orderId: string, reason: string) => boolean;
+-  completeOrder: (orderId: string) => { success: boolean; errors: string[] };
++  approveOrder: (orderId: string) => Promise<{ success: boolean; errors: string[] }>;
++  rejectOrder: (orderId: string) => Promise<{ success: boolean; errors: string[] }>;
++  completeOrder: (orderId: string) => Promise<{ success: boolean; errors: string[] }>;
+   reorderOrder: (orderId: string) => Promise<{
+     added: Array<{ productName: string; quantity: number }>;
+     limited: Array<{ productName: string; requested: number; added: number; available: number }>;
+@@ -59,7 +59,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
+   const [favoriteStores, setFavoriteStores] = useState<string[]>(['store-1']);
+   const [orders, setOrders] = useState<Order[]>([]);
+   const [favoriteProducts, setFavoriteProducts] = useState<string[]>([]);
+-  const approvedOrderIds = useRef(new Set<string>());
+ 
+   const enqueueCartMutation = <T,>(operation: () => Promise<T> | T): Promise<T> => {
+     cartMutationPending.current += 1;
+@@ -268,40 +267,40 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
+     });
+   };
+ 
+-  const approveOrder = (orderId: string): { success: boolean; errors: string[] } => {
+-    const order = orders.find((item) => item.id === orderId);
+-    if (!order) return { success: false, errors: ['Order not found.'] };
+-    if (approvedOrderIds.current.has(orderId) || order.status !== 'pending') {
+-      return { success: false, errors: ['This order has already been approved.'] };
++  const approveOrder = async (orderId: string): Promise<{ success: boolean; errors: string[] }> => {
++    try {
++      const result = await iocContainer.getDatabase().approveOrderAsync(orderId);
++      setOrders((previous) => previous.map((item) => item.id === result.orderId
++        ? { ...item, status: 'approved', approvedAt: new Date().toISOString() }
++        : item));
++      return { success: true, errors: [] };
++    } catch (caught) {
++      return { success: false, errors: [caught instanceof Error ? caught.message : 'Unable to approve order.'] };
+     }
+-
+-    const database = iocContainer.getDatabase();
+-    const result = database.approveAndDeductOrderStock(order.items);
+-    if (!result.success) return result;
+-
+-    approvedOrderIds.current.add(orderId);
+-    setOrders((previous) => previous.map((item) => item.id === orderId ? { ...item, status: 'approved', approvedAt: new Date().toISOString(), stockDeducted: true } : item));
+-    return { success: true, errors: [] };
+   };
+ 
+-  const rejectOrder = (orderId: string, reason: string): boolean => {
+-    const reasonText = reason.trim();
+-    if (!reasonText) return false;
+-    const order = orders.find((item) => item.id === orderId);
+-    if (!order || order.status !== 'pending') return false;
+-    setOrders((previous) => previous.map((item) => item.id === orderId ? { ...item, status: 'rejected', rejectionReason: reasonText, rejectedAt: new Date().toISOString() } : item));
+-    return true;
++  const rejectOrder = async (orderId: string): Promise<{ success: boolean; errors: string[] }> => {
++    try {
++      const result = await iocContainer.getDatabase().rejectOrderAsync(orderId);
++      setOrders((previous) => previous.map((item) => item.id === result.orderId
++        ? { ...item, status: 'rejected', rejectionReason: 'Rejected by administrator.', rejectedAt: new Date().toISOString() }
++        : item));
++      return { success: true, errors: [] };
++    } catch (caught) {
++      return { success: false, errors: [caught instanceof Error ? caught.message : 'Unable to reject order.'] };
++    }
+   };
+ 
+-  const completeOrder = (orderId: string): { success: boolean; errors: string[] } => {
+-    const order = orders.find((item) => item.id === orderId);
+-    if (!order) return { success: false, errors: ['Order not found.'] };
+-    if (order.status !== 'approved') return { success: false, errors: ['Only approved orders can be completed.'] };
+-
+-    setOrders((previous) => previous.map((item) => item.id === orderId
+-      ? { ...item, status: 'completed', completedAt: new Date().toISOString() }
+-      : item));
+-    return { success: true, errors: [] };
++  const completeOrder = async (orderId: string): Promise<{ success: boolean; errors: string[] }> => {
++    try {
++      const result = await iocContainer.getDatabase().completeOrderAsync(orderId);
++      setOrders((previous) => previous.map((item) => item.id === result.orderId
++        ? { ...item, status: 'completed', completedAt: new Date().toISOString() }
++        : item));
++      return { success: true, errors: [] };
++    } catch (caught) {
++      return { success: false, errors: [caught instanceof Error ? caught.message : 'Unable to complete order.'] };
++    }
+   };
+ 
+   const reorderOrder = (orderId: string): Promise<{

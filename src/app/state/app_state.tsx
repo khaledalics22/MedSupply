@@ -25,9 +25,9 @@ type AppStateContextValue = {
   createOrder: () => Promise<{ success: boolean; issues: CheckoutValidationIssue[]; orderId?: string }>;
   favoriteStores: string[];
   toggleFavoriteStore: (storeId: string) => void;
-  approveOrder: (orderId: string) => { success: boolean; errors: string[] };
-  rejectOrder: (orderId: string, reason: string) => boolean;
-  completeOrder: (orderId: string) => { success: boolean; errors: string[] };
+  approveOrder: (orderId: string) => Promise<{ success: boolean; errors: string[] }>;
+  rejectOrder: (orderId: string) => Promise<{ success: boolean; errors: string[] }>;
+  completeOrder: (orderId: string) => Promise<{ success: boolean; errors: string[] }>;
   reorderOrder: (orderId: string) => Promise<{
     added: Array<{ productName: string; quantity: number }>;
     limited: Array<{ productName: string; requested: number; added: number; available: number }>;
@@ -59,7 +59,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [favoriteStores, setFavoriteStores] = useState<string[]>(['store-1']);
   const [orders, setOrders] = useState<Order[]>([]);
   const [favoriteProducts, setFavoriteProducts] = useState<string[]>([]);
-  const approvedOrderIds = useRef(new Set<string>());
 
   const enqueueCartMutation = <T,>(operation: () => Promise<T> | T): Promise<T> => {
     cartMutationPending.current += 1;
@@ -268,40 +267,40 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const approveOrder = (orderId: string): { success: boolean; errors: string[] } => {
-    const order = orders.find((item) => item.id === orderId);
-    if (!order) return { success: false, errors: ['Order not found.'] };
-    if (approvedOrderIds.current.has(orderId) || order.status !== 'pending') {
-      return { success: false, errors: ['This order has already been approved.'] };
+  const approveOrder = async (orderId: string): Promise<{ success: boolean; errors: string[] }> => {
+    try {
+      const result = await iocContainer.getDatabase().approveOrderAsync(orderId);
+      setOrders((previous) => previous.map((item) => item.id === result.orderId
+        ? { ...item, status: 'approved', approvedAt: new Date().toISOString() }
+        : item));
+      return { success: true, errors: [] };
+    } catch (caught) {
+      return { success: false, errors: [caught instanceof Error ? caught.message : 'Unable to approve order.'] };
     }
-
-    const database = iocContainer.getDatabase();
-    const result = database.approveAndDeductOrderStock(order.items);
-    if (!result.success) return result;
-
-    approvedOrderIds.current.add(orderId);
-    setOrders((previous) => previous.map((item) => item.id === orderId ? { ...item, status: 'approved', approvedAt: new Date().toISOString(), stockDeducted: true } : item));
-    return { success: true, errors: [] };
   };
 
-  const rejectOrder = (orderId: string, reason: string): boolean => {
-    const reasonText = reason.trim();
-    if (!reasonText) return false;
-    const order = orders.find((item) => item.id === orderId);
-    if (!order || order.status !== 'pending') return false;
-    setOrders((previous) => previous.map((item) => item.id === orderId ? { ...item, status: 'rejected', rejectionReason: reasonText, rejectedAt: new Date().toISOString() } : item));
-    return true;
+  const rejectOrder = async (orderId: string): Promise<{ success: boolean; errors: string[] }> => {
+    try {
+      const result = await iocContainer.getDatabase().rejectOrderAsync(orderId);
+      setOrders((previous) => previous.map((item) => item.id === result.orderId
+        ? { ...item, status: 'rejected', rejectionReason: 'Rejected by administrator.', rejectedAt: new Date().toISOString() }
+        : item));
+      return { success: true, errors: [] };
+    } catch (caught) {
+      return { success: false, errors: [caught instanceof Error ? caught.message : 'Unable to reject order.'] };
+    }
   };
 
-  const completeOrder = (orderId: string): { success: boolean; errors: string[] } => {
-    const order = orders.find((item) => item.id === orderId);
-    if (!order) return { success: false, errors: ['Order not found.'] };
-    if (order.status !== 'approved') return { success: false, errors: ['Only approved orders can be completed.'] };
-
-    setOrders((previous) => previous.map((item) => item.id === orderId
-      ? { ...item, status: 'completed', completedAt: new Date().toISOString() }
-      : item));
-    return { success: true, errors: [] };
+  const completeOrder = async (orderId: string): Promise<{ success: boolean; errors: string[] }> => {
+    try {
+      const result = await iocContainer.getDatabase().completeOrderAsync(orderId);
+      setOrders((previous) => previous.map((item) => item.id === result.orderId
+        ? { ...item, status: 'completed', completedAt: new Date().toISOString() }
+        : item));
+      return { success: true, errors: [] };
+    } catch (caught) {
+      return { success: false, errors: [caught instanceof Error ? caught.message : 'Unable to complete order.'] };
+    }
   };
 
   const reorderOrder = (orderId: string): Promise<{

@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react';
 import { iocContainer } from '../../models/ioc_container';
 import { getStockStatus } from '../../models/database';
 import { authService } from '../../models/auth_service';
-import { useAppState } from '../../state/app_state';
 import { useAuthState } from '../../state/auth_state';
 import styles from './styles';
 
@@ -40,12 +39,12 @@ export default function AdminLayout({ onStoreManagement, onAddStore, onManufactu
   onPharmacists: (status?: 'all' | 'pending' | 'active' | 'rejected' | 'inactive') => void;
 }) {
   const { user, logout } = useAuthState();
-  const { orders } = useAppState();
   const database = iocContainer.getDatabase();
   const [pharmacists, setPharmacists] = useState<import('../../models/auth').User[]>([]);
   const [stores, setStores] = useState<import('../../models/data_types').Store[]>([]);
   const [manufacturers, setManufacturers] = useState<import('../../models/data_types').Factory[]>([]);
   const [products, setProducts] = useState<import('../../models/data_types').Product[]>([]);
+  const [orders, setOrders] = useState<import('../../models/data_types').Order[]>([]);
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [dashboardError, setDashboardError] = useState('');
   const [dashboardRefresh, setDashboardRefresh] = useState(0);
@@ -85,10 +84,11 @@ export default function AdminLayout({ onStoreManagement, onAddStore, onManufactu
       setDashboardLoading(true);
       setDashboardError('');
       try {
-        const [storeItems, manufacturerItems, pharmacistItems] = await Promise.all([
+        const [storeItems, manufacturerItems, pharmacistItems, orderItems] = await Promise.all([
           database.getStoresAsync(true),
           database.getFactoriesAsync(true),
           authService.getPharmacists(),
+          database.getAllOrdersAsync(),
         ]);
         const [storeProducts, manufacturerProducts] = await Promise.all([
           Promise.all(storeItems.map((store) => database.getProductsByStoreAsync(store.id))),
@@ -100,6 +100,7 @@ export default function AdminLayout({ onStoreManagement, onAddStore, onManufactu
         setStores(storeItems);
         setManufacturers(manufacturerItems);
         setPharmacists(pharmacistItems);
+        setOrders(orderItems);
         setProducts(Array.from(new Map(combinedProducts.map((product) => [product.id, product])).values()));
       } catch (caught) {
         if (active) setDashboardError(caught instanceof Error ? caught.message : 'Unable to load dashboard statistics.');

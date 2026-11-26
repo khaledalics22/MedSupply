@@ -13,6 +13,7 @@ import {
   type OrderLineSnapshot,
   type OrderCreationItem,
   type OrderCreationResult,
+  type OrderActionResult,
   type Order,
 } from './data_types';
 
@@ -56,6 +57,9 @@ export abstract class Database {
   abstract createOrderAsync(items: OrderCreationItem[]): Promise<OrderCreationResult>;
   abstract getAllOrdersAsync(): Promise<Order[]>;
   abstract getOrderByIdAsync(orderId: string): Promise<Order | undefined>;
+  abstract approveOrderAsync(orderId: string): Promise<OrderActionResult>;
+  abstract rejectOrderAsync(orderId: string): Promise<OrderActionResult>;
+  abstract completeOrderAsync(orderId: string): Promise<OrderActionResult>;
 
   abstract getStoresAsync(includeInactive?: boolean): Promise<Store[]>;
   abstract getActiveStoresAsync(): Promise<Store[]>;
@@ -477,6 +481,15 @@ export class MockDatabase extends Database {
   }
   async getOrderByIdAsync(orderId: string): Promise<Order | undefined> {
     return undefined;
+  }
+  async approveOrderAsync(orderId: string): Promise<OrderActionResult> {
+    throw new Error('Mock order approval is unavailable. Use Supabase approve_order in production.');
+  }
+  async rejectOrderAsync(orderId: string): Promise<OrderActionResult> {
+    throw new Error('Mock order rejection is unavailable. Use Supabase reject_order in production.');
+  }
+  async completeOrderAsync(orderId: string): Promise<OrderActionResult> {
+    throw new Error('Mock order completion is unavailable. Use Supabase complete_order in production.');
   }
 
   // Async methods

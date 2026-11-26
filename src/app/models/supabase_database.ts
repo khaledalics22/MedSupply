@@ -9,6 +9,7 @@ import type {
   Specialty,
   OrderCreationItem,
   OrderCreationResult,
+  OrderActionResult,
   Order,
   OrderLineSnapshot,
 } from './data_types';
@@ -122,6 +123,18 @@ export class SupabaseProviderDatabase {
       completedAt: row.completed_at ? String(row.completed_at) : undefined,
       stockDeducted: Boolean(row.stock_deducted),
     };
+  }
+
+  private mapOrderActionResult(data: unknown, expectedStatus: 'approved' | 'rejected' | 'completed'): OrderActionResult {
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+      throw new Error('Supabase did not return a valid order action result.');
+    }
+    const result = data as Record<string, unknown>;
+    const orderId = typeof result.order_id === 'string' ? result.order_id.trim() : '';
+    const status = result.status;
+    if (!orderId) throw new Error('Supabase did not return a valid order ID.');
+    if (status !== expectedStatus) throw new Error(`Unexpected order action status: ${String(status)}.`);
+    return { orderId, status: expectedStatus };
   }
 
   async getProductsByStore(storeId: string): Promise<Product[]> {
@@ -451,6 +464,30 @@ export class SupabaseProviderDatabase {
       totalAmount: Number(data.total_amount),
       status: 'pending',
     };
+  }
+
+  async approveOrderAsync(orderId: string): Promise<OrderActionResult> {
+    const client = supabase;
+    if (!client) throw new Error('Supabase is not configured.');
+    const { data, error } = await client.rpc('approve_order', { target_order_id: orderId });
+    if (error) throw new Error(`${error.code ?? 'DB_ERROR'}: ${error.message}`);
+    return this.mapOrderActionResult(data, 'approved');
+  }
+
+  async rejectOrderAsync(orderId: string): Promise<OrderActionResult> {
+    const client = supabase;
+    if (!client) throw new Error('Supabase is not configured.');
+    const { data, error } = await client.rpc('reject_order', { target_order_id: orderId });
+    if (error) throw new Error(`${error.code ?? 'DB_ERROR'}: ${error.message}`);
+    return this.mapOrderActionResult(data, 'rejected');
+  }
+
+  async completeOrderAsync(orderId: string): Promise<OrderActionResult> {
+    const client = supabase;
+    if (!client) throw new Error('Supabase is not configured.');
+    const { data, error } = await client.rpc('complete_order', { target_order_id: orderId });
+    if (error) throw new Error(`${error.code ?? 'DB_ERROR'}: ${error.message}`);
+    return this.mapOrderActionResult(data, 'completed');
   }
 }
 

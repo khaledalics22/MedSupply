@@ -224,3 +224,8 @@ export interface OrderCreationResult {
   totalAmount: number;
   status: 'pending';
 }
+
+export interface OrderActionResult {
+  orderId: string;
+  status: 'approved' | 'rejected' | 'completed';
+}
