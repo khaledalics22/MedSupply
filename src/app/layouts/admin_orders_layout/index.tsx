@@ -4,6 +4,7 @@ import { FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native'
 
 import type { Order, OrderStatus } from '../../models/data_types';
 import { iocContainer } from '../../models/ioc_container';
+import FilterPanel from '../../components/filter_panel';
 import styles from './styles';
 
 export default function AdminOrdersLayout({ onBack, onOrderSelected, initialStatus }: { onBack: () => void; onOrderSelected: (orderId: string) => void; initialStatus?: 'all' | OrderStatus }) {
@@ -13,6 +14,7 @@ export default function AdminOrdersLayout({ onBack, onOrderSelected, initialStat
   const [refreshVersion, setRefreshVersion] = useState(0);
   const [statusFilter, setStatusFilter] = useState<'all' | OrderStatus>(initialStatus ?? 'all');
   const [query, setQuery] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -39,14 +41,14 @@ export default function AdminOrdersLayout({ onBack, onOrderSelected, initialStat
         <Text style={styles.title}>Order Management</Text>
         <View style={styles.headerSpace} />
       </View>
-      <View style={styles.searchRow}><Ionicons name="search" size={20} color="#718096" /><TextInput value={query} onChangeText={setQuery} placeholder="Search order ID or pharmacist" style={styles.searchInput} /></View>
+      <View style={styles.searchRow}><Ionicons name="search" size={20} color="#718096" /><TextInput value={query} onChangeText={setQuery} placeholder="Search order ID or pharmacist" style={styles.searchInput} /><TouchableOpacity style={styles.filterButton} onPress={() => setShowFilters((visible) => !visible)}><Ionicons name="options" size={18} color="#208AEF" /></TouchableOpacity></View>
+      <FilterPanel visible={showFilters} title="Filters" clearLabel="Clear" applyLabel="Apply" onClear={() => { setStatusFilter('all'); setQuery(''); }} onApply={() => setShowFilters(false)}>
+        <View style={styles.filters}>{(['all', 'pending', 'approved', 'rejected', 'completed'] as const).map((status) => {
+          const count = status === 'all' ? orders.length : orders.filter((order) => order.status === status).length;
+          return <TouchableOpacity key={status} style={[styles.filter, statusFilter === status && styles.filterActive]} onPress={() => setStatusFilter(status)}><Text style={[styles.filterText, statusFilter === status && styles.filterTextActive]}>{status === 'all' ? 'All Orders' : status} ({count})</Text></TouchableOpacity>;
+        })}</View>
+      </FilterPanel>
       {loading ? <Text style={styles.emptyText}>Loading orders...</Text> : error ? <View style={styles.empty}><Text style={styles.emptyTitle}>Unable to load orders</Text><Text style={styles.emptyText}>{error}</Text><TouchableOpacity style={styles.filter} onPress={() => setRefreshVersion((value) => value + 1)}><Text style={styles.filterText}>Retry</Text></TouchableOpacity></View> : null}
-      <View style={styles.filters}>{(['all', 'pending', 'approved', 'rejected', 'completed'] as const).map((status) => {
-        const count = status === 'all' ? orders.length : orders.filter((order) => order.status === status).length;
-        return <TouchableOpacity key={status} style={[styles.filter, statusFilter === status && styles.filterActive]} onPress={() => setStatusFilter(status)}><Text style={[styles.filterText, statusFilter === status && styles.filterTextActive]}>{status === 'all' ? 'All Orders' : status} ({count})</Text></TouchableOpacity>;
-      })}
-        <TouchableOpacity style={styles.filter} onPress={() => { setStatusFilter('all'); setQuery(''); }}><Text style={styles.filterText}>Clear / Reset</Text></TouchableOpacity>
-      </View>
       {error ? <Text style={{ color: 'red' }}>{error}</Text> : (
         <FlatList
           data={filtered}

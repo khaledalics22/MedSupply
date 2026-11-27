@@ -5,6 +5,7 @@ import { Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import type { Order, OrderLineSnapshot } from '../../models/data_types';
 import { iocContainer } from '../../models/ioc_container';
 import { useAppState } from '../../state/app_state';
+import { t } from '../../i18n';
 import styles from './styles';
 
 export default function AdminOrderDetailLayout({ orderId, onBack }: { orderId: string; onBack: () => void }) {
@@ -77,61 +78,61 @@ export default function AdminOrderDetailLayout({ orderId, onBack }: { orderId: s
         <View style={styles.infoCard}>
           <Text style={styles.orderId}>{order.id}</Text>
           <Text style={styles.status}>{order.status}</Text>
-          <Info label="Pharmacist" value={order.customerName ?? 'Pharmacist'} />
-          <Info label="Pharmacy" value={order.pharmacyName ?? 'N/A'} />
-          <Info label="Email" value={order.pharmacistEmail ?? 'N/A'} />
-          <Info label="Phone" value={order.pharmacistPhone ?? 'N/A'} />
-          <Info label="Order date" value={formatDate(order.createdAt)} />
-          {order.completedAt ? <Info label="Completed date" value={formatDate(order.completedAt)} /> : null}
-          <Info label="Subtotal before discount" value={`${(order.subtotalAmount ?? order.totalPrice + order.totalDiscount).toFixed(2)} EGP`} />
-          <Info label="Discount" value={`${order.totalDiscount.toFixed(2)} EGP`} />
-          <Info label="Final total" value={`${order.totalPrice.toFixed(2)} EGP`} />
-          <Info label="Total quantity" value={String(order.totalItems)} />
-          <Info label="Line count" value={String(order.lineCount ?? order.items.length)} />
-          {order.rejectionReason ? <View style={styles.rejection}><Text style={styles.rejectionLabel}>Rejection reason</Text><Text style={styles.rejectionText}>{order.rejectionReason}</Text></View> : null}
+          <Info label={t('admin.orderDetail.pharmacist')} value={order.customerName ?? 'Pharmacist'} />
+          <Info label={t('admin.orderDetail.pharmacy')} value={order.pharmacyName ?? 'N/A'} />
+          <Info label={t('admin.orderDetail.email')} value={order.pharmacistEmail ?? 'N/A'} />
+          <Info label={t('admin.orderDetail.phone')} value={order.pharmacistPhone ?? 'N/A'} />
+          <Info label={t('admin.orderDetail.orderDate')} value={formatDate(order.createdAt)} />
+          {order.completedAt ? <Info label={t('admin.orderDetail.completedDate')} value={formatDate(order.completedAt)} /> : null}
+          <Info label={t('admin.orderDetail.subtotalBeforeDiscount')} value={`${(order.subtotalAmount ?? order.totalPrice + order.totalDiscount).toFixed(2)} EGP`} />
+          <Info label={t('admin.orderDetail.discount')} value={`${order.totalDiscount.toFixed(2)} EGP`} />
+          <Info label={t('admin.orderDetail.finalTotal')} value={`${order.totalPrice.toFixed(2)} EGP`} />
+          <Info label={t('admin.orderDetail.totalQuantity')} value={String(order.totalItems)} />
+          <Info label={t('admin.orderDetail.lineCount')} value={String(order.lineCount ?? order.items.length)} />
+          {order.rejectionReason ? <View style={styles.rejection}><Text style={styles.rejectionLabel}>{t('admin.orderDetail.rejectionReason')}</Text><Text style={styles.rejectionText}>{order.rejectionReason}</Text></View> : null}
         </View>
 
-        <Text style={styles.sectionTitle}>Provider Items</Text>
+        <Text style={styles.sectionTitle}>{t('admin.orderDetail.providerItems')}</Text>
         {groups.map((group) => {
           const subtotalBefore = group.lines.reduce((sum, line) => sum + (line.consumerPrice ?? line.unitPrice) * line.quantity, 0);
           const subtotalAfter = group.lines.reduce((sum, line) => sum + line.lineTotal, 0);
           const quantity = group.lines.reduce((sum, line) => sum + line.quantity, 0);
           return <View key={`${group.type}-${group.lines[0].sellerId}`} style={styles.providerCard}>
-            <View style={styles.providerHeader}><View><Text style={styles.providerName}>{group.name}</Text><Text style={styles.providerType}>{group.type === 'store' ? 'Store' : 'Manufacturer'}</Text></View><Text style={styles.providerSubtotal}>{subtotalAfter.toFixed(2)} EGP</Text></View>
-            <Text style={styles.lineMeta}>Minimum: {group.minimum.toFixed(2)} EGP</Text>
-            <Text style={styles.lineMeta}>Subtotal before discount: {subtotalBefore.toFixed(2)} EGP</Text>
-            <Text style={styles.lineMeta}>Subtotal after discount: {subtotalAfter.toFixed(2)} EGP</Text>
-            <Text style={styles.lineMeta}>Quantity: {quantity} • Items: {group.lines.length}</Text>
+            <View style={styles.providerHeader}><View><Text style={styles.providerName}>{group.name}</Text><Text style={styles.providerType}>{group.type === 'store' ? t('admin.orderDetail.store') : t('admin.orderDetail.manufacturer')}</Text></View><Text style={styles.providerSubtotal}>{subtotalAfter.toFixed(2)} EGP</Text></View>
+            <Text style={styles.lineMeta}>{t('admin.orderDetail.minimum')}: {group.minimum.toFixed(2)} EGP</Text>
+            <Text style={styles.lineMeta}>{t('admin.orderDetail.subtotalBeforeDiscount')}: {subtotalBefore.toFixed(2)} EGP</Text>
+            <Text style={styles.lineMeta}>{t('admin.orderDetail.subtotalAfterDiscount')}: {subtotalAfter.toFixed(2)} EGP</Text>
+            <Text style={styles.lineMeta}>{t('admin.orderDetail.quantity')}: {quantity} • {t('admin.orderDetail.items')}: {group.lines.length}</Text>
             {group.lines.map((line) => <View key={`${line.productId}-${line.sellerId}`} style={styles.line}>
               <Text style={styles.productName}>{line.productName}</Text>
-              {line.dosage ? <Text style={styles.lineMeta}>Dosage: {line.dosage}</Text> : null}
-              {line.packageSize ? <Text style={styles.lineMeta}>Package: {line.packageSize}</Text> : null}
-              {line.variant ? <Text style={styles.lineMeta}>Variant: {line.variant}</Text> : null}
-              {line.specialtyName ? <Text style={styles.lineMeta}>Specialty: {line.specialtyName}</Text> : null}
-              <View style={styles.lineGrid}><Text style={styles.lineMeta}>Consumer: {(line.consumerPrice ?? line.unitPrice).toFixed(2)} EGP</Text><Text style={styles.lineMeta}>Discount: {line.discountPercentage}%</Text><Text style={styles.lineMeta}>Final: {(line.pharmacyPriceAfterDiscount ?? line.unitPrice).toFixed(2)} EGP</Text><Text style={styles.lineMeta}>Quantity: {line.quantity}</Text></View>
-              <Text style={styles.lineMeta}>Line before discount: {((line.consumerPrice ?? line.unitPrice) * line.quantity).toFixed(2)} EGP</Text>
-              <Text style={styles.lineTotal}>Line after discount: {line.lineTotal.toFixed(2)} EGP</Text>
+              {line.dosage ? <Text style={styles.lineMeta}>{t('admin.orderDetail.dosage')}: {line.dosage}</Text> : null}
+              {line.packageSize ? <Text style={styles.lineMeta}>{t('admin.orderDetail.package')}: {line.packageSize}</Text> : null}
+              {line.variant ? <Text style={styles.lineMeta}>{t('admin.orderDetail.variant')}: {line.variant}</Text> : null}
+              {line.specialtyName ? <Text style={styles.lineMeta}>{t('admin.orderDetail.specialty')}: {line.specialtyName}</Text> : null}
+              <View style={styles.lineGrid}><Text style={styles.lineMeta}>{t('admin.orderDetail.consumer')}: {(line.consumerPrice ?? line.unitPrice).toFixed(2)} EGP</Text><Text style={styles.lineMeta}>{t('admin.orderDetail.discount')}: {line.discountPercentage}%</Text><Text style={styles.lineMeta}>{t('admin.orderDetail.final')}: {(line.pharmacyPriceAfterDiscount ?? line.unitPrice).toFixed(2)} EGP</Text><Text style={styles.lineMeta}>{t('admin.orderDetail.quantity')}: {line.quantity}</Text></View>
+              <Text style={styles.lineMeta}>{t('admin.orderDetail.lineBeforeDiscount')}: {((line.consumerPrice ?? line.unitPrice) * line.quantity).toFixed(2)} EGP</Text>
+              <Text style={styles.lineTotal}>{t('admin.orderDetail.lineAfterDiscount')}: {line.lineTotal.toFixed(2)} EGP</Text>
             </View>)}
           </View>;
         })}
 
         {order.status === 'pending' ? <View style={styles.actions}>
-          <TouchableOpacity style={styles.rejectButton} disabled={submitting} onPress={() => { setActionError(''); setActionFeedback(''); setActionType('reject'); }}><Text style={styles.rejectText}>Reject Order</Text></TouchableOpacity>
-          <TouchableOpacity style={styles.approveButton} disabled={submitting} onPress={() => { setActionError(''); setActionFeedback(''); setActionType('approve'); }}><Text style={styles.approveText}>Approve Order</Text></TouchableOpacity>
+          <TouchableOpacity style={styles.rejectButton} disabled={submitting} onPress={() => { setActionError(''); setActionFeedback(''); setActionType('reject'); }}><Text style={styles.rejectText}>{t('admin.orderDetail.rejectOrder')}</Text></TouchableOpacity>
+          <TouchableOpacity style={styles.approveButton} disabled={submitting} onPress={() => { setActionError(''); setActionFeedback(''); setActionType('approve'); }}><Text style={styles.approveText}>{t('admin.orderDetail.approveOrder')}</Text></TouchableOpacity>
         </View> : null}
         {order.status === 'approved' ? <View style={styles.actions}>
-          <TouchableOpacity style={styles.approveButton} disabled={submitting} onPress={() => { setActionError(''); setActionFeedback(''); setActionType('complete'); }}><Text style={styles.approveText}>Complete Order</Text></TouchableOpacity>
+          <TouchableOpacity style={styles.approveButton} disabled={submitting} onPress={() => { setActionError(''); setActionFeedback(''); setActionType('complete'); }}><Text style={styles.approveText}>{t('admin.orderDetail.completeOrder')}</Text></TouchableOpacity>
         </View> : null}
       </ScrollView>
 
       <Modal visible={actionType !== null} transparent animationType="fade" onRequestClose={() => { if (!submitting) setActionType(null); }}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>{actionType === 'approve' ? 'Approve entire order?' : actionType === 'reject' ? 'Reject entire order?' : 'Complete entire order?'}</Text>
-            <Text style={styles.modalText}>{actionType === 'approve' ? 'The persisted order status will become approved. Stock will not change.' : actionType === 'reject' ? 'The persisted order status will become rejected and its deducted stock will be restored.' : 'The persisted order status will become completed. Stock will not change.'}</Text>
+            <Text style={styles.modalTitle}>{actionType === 'approve' ? t('admin.orderDetail.approveEntireOrder') : actionType === 'reject' ? t('admin.orderDetail.rejectEntireOrder') : t('admin.orderDetail.completeEntireOrder')}</Text>
+            <Text style={styles.modalText}>{actionType === 'approve' ? t('admin.orderDetail.approveOrderStatus') : actionType === 'reject' ? t('admin.orderDetail.rejectOrderStatus') : t('admin.orderDetail.completeOrderStatus')}</Text>
             <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.cancelButton} disabled={submitting} onPress={() => setActionType(null)}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity>
-              <TouchableOpacity style={actionType === 'reject' ? styles.confirmReject : actionType === 'complete' ? styles.confirmComplete : styles.confirmApprove} disabled={submitting} onPress={() => void submitAction()}><Text style={styles.confirmText}>{submitting ? 'Submitting...' : actionType === 'approve' ? 'Approve' : actionType === 'reject' ? 'Reject' : 'Complete'}</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.cancelButton} disabled={submitting} onPress={() => setActionType(null)}><Text style={styles.cancelText}>{t('admin.orderDetail.cancel')}</Text></TouchableOpacity>
+              <TouchableOpacity style={actionType === 'reject' ? styles.confirmReject : actionType === 'complete' ? styles.confirmComplete : styles.confirmApprove} disabled={submitting} onPress={() => void submitAction()}><Text style={styles.confirmText}>{submitting ? t('admin.orderDetail.submitting') : actionType === 'approve' ? t('admin.orderDetail.approve') : actionType === 'reject' ? t('admin.orderDetail.reject') : t('admin.orderDetail.complete')}</Text></TouchableOpacity>
             </View>
           </View>
         </View>

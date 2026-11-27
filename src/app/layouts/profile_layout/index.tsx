@@ -2,7 +2,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import {
   FlatList,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   Text,
   TextInput,
@@ -10,6 +12,7 @@ import {
   View,
 } from "react-native";
 
+import { t } from '../../i18n';
 import { type LanguageCode } from "../../i18n";
 import { iocContainer } from "../../models/ioc_container";
 import { useAppState } from "../../state/app_state";
@@ -25,7 +28,7 @@ export default function ProfileLayout({
   onBack: () => void;
   onFavorites: () => void;
 }) {
-  const { favoriteStores } = useAppState();
+  const { favoriteStores, language: selectedLanguage, setLanguage } = useAppState();
   const { user, logout, updateProfile, changePassword } = useAuthState();
   const database = iocContainer.getDatabase();
   const [favoriteStoreItems, setFavoriteStoreItems] = useState<import('../../models/data_types').Store[]>([]);
@@ -170,149 +173,170 @@ export default function ProfileLayout({
             }}
           >
             <Ionicons name="create-outline" size={18} color="#208AEF" />
-            <Text style={styles.editText}>Edit</Text>
+            <Text style={styles.editText}>{t('edit', selectedLanguage)}</Text>
           </TouchableOpacity>
         ) : null}
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        {feedback ? <Text style={styles.success}>{feedback}</Text> : null}
+      <KeyboardAvoidingView
+        style={styles.content}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={100}
+      >
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {feedback ? <Text style={styles.success}>{feedback}</Text> : null}
 
-        <View style={styles.panel}>
-          <Text style={styles.sectionTitle}>Personal Information</Text>
-          <Field
-            label="Full name *"
-            value={fullName}
-            onChangeText={setFullName}
-            editable={editing}
-          />
-          <Field
-            label="Email address *"
-            value={email}
-            onChangeText={setEmail}
-            editable={editing}
-            email
-          />
-          <Field
-            label="Phone number *"
-            value={phone}
-            onChangeText={setPhone}
-            editable={editing}
-            phone
-          />
-          <Field
-            label="Profile picture URL"
-            value={profilePicture}
-            onChangeText={setProfilePicture}
-            editable={editing}
-          />
-        </View>
+          <View style={styles.panel}>
+            <Text style={styles.sectionTitle}>{t('personalInformation', selectedLanguage)}</Text>
+            <Field
+              label="Full name *"
+              value={fullName}
+              onChangeText={setFullName}
+              editable={editing}
+            />
+            <Field
+              label="Email address *"
+              value={email}
+              onChangeText={setEmail}
+              editable={editing}
+              email
+            />
+            <Field
+              label="Phone number *"
+              value={phone}
+              onChangeText={setPhone}
+              editable={editing}
+              phone
+            />
+            <Field
+              label="Profile picture URL"
+              value={profilePicture}
+              onChangeText={setProfilePicture}
+              editable={editing}
+            />
+          </View>
 
-        <View style={styles.panel}>
-          <Text style={styles.sectionTitle}>Pharmacy Information</Text>
-          <Field
-            label="Pharmacy name *"
-            value={pharmacyName}
-            onChangeText={setPharmacyName}
-            editable={editing}
-          />
-          <Field
-            label="Pharmacy address *"
-            value={pharmacyAddress}
-            onChangeText={setPharmacyAddress}
-            editable={editing}
-            multiline
-          />
-        </View>
+          <View style={styles.panel}>
+            <Text style={styles.sectionTitle}>{t('pharmacyInformation', selectedLanguage)}</Text>
+            <Field
+              label="Pharmacy name *"
+              value={pharmacyName}
+              onChangeText={setPharmacyName}
+              editable={editing}
+            />
+            <Field
+              label="Pharmacy address *"
+              value={pharmacyAddress}
+              onChangeText={setPharmacyAddress}
+              editable={editing}
+              multiline
+            />
+          </View>
 
-        {editing ? (
-          <View style={styles.editActions}>
+          {editing ? (
+            <View style={styles.editActions}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={cancelEdit}
+              >
+                <Text style={styles.cancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={() => void saveProfile()}
+                disabled={saving}
+              >
+                <Text style={styles.saveText}>
+                  {saving ? "Saving..." : "Save changes"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
+          <View style={styles.panel}>
+            <Text style={styles.sectionTitle}>{t('accountSettings', selectedLanguage)}</Text>
             <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={cancelEdit}
+              style={styles.settingRow}
+              onPress={() => {
+                setError("");
+                setPasswordVisible(true);
+              }}
             >
-              <Text style={styles.cancelText}>Cancel</Text>
+              <View style={styles.settingIcon}>
+                <Ionicons name="key-outline" size={20} color="#208AEF" />
+              </View>
+              <View style={styles.settingText}>
+                <Text style={styles.settingTitle}>{t('changePassword', selectedLanguage)}</Text>
+                <Text style={styles.settingMeta}>{t('updatePassword', selectedLanguage)}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.saveButton}
-              onPress={() => void saveProfile()}
-              disabled={saving}
+              style={styles.settingRow}
+              onPress={onFavorites}
             >
-              <Text style={styles.saveText}>
-                {saving ? "Saving..." : "Save changes"}
-              </Text>
+              <View style={styles.settingIcon}>
+                <Ionicons name="heart-outline" size={20} color="#208AEF" />
+              </View>
+              <View style={styles.settingText}>
+                <Text style={styles.settingTitle}>{t('favorites', selectedLanguage)}</Text>
+                <Text style={styles.settingMeta}>{t('savedProviderProducts', selectedLanguage)}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
             </TouchableOpacity>
           </View>
-        ) : null}
 
-        <View style={styles.panel}>
-          <Text style={styles.sectionTitle}>Account Settings</Text>
+          <View style={styles.panel}>
+            <Text style={styles.sectionTitle}>{t('language', selectedLanguage)}</Text>
+            <View style={styles.settingRow}>
+              {(['en', 'ar'] as const).map((code) => (
+                <TouchableOpacity
+                  key={code}
+                  style={[styles.editButton, selectedLanguage === code && styles.saveButton]}
+                  onPress={() => setLanguage(code)}
+                >
+                  <Text style={[styles.editText, selectedLanguage === code && styles.saveText]}>{code === 'en' ? 'English' : 'العربية'}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.panel}>
+            <Text style={styles.sectionTitle}>{t('favoriteStores', selectedLanguage)}</Text>
+            {favoriteStoresLoading ? (
+              <Text style={styles.empty}>{t('loading', selectedLanguage)}</Text>
+            ) : favoriteStoreItems.length === 0 ? (
+              <Text style={styles.empty}>No favorites yet.</Text>
+            ) : (
+              <FlatList
+                data={favoriteStoreItems}
+                keyExtractor={(item) => item.id}
+                scrollEnabled={false}
+                renderItem={({ item }) => (
+                  <View style={styles.favoriteRow}>
+                    <Text style={styles.favoriteName}>{item.name}</Text>
+                    <Text style={styles.favoriteMeta}>
+                      {item.address ?? "Local store"}
+                    </Text>
+                  </View>
+                )}
+              />
+            )}
+            {favoriteStoresError ? (
+              <Text style={styles.error}>{favoriteStoresError}</Text>
+            ) : null}
+          </View>
+
           <TouchableOpacity
-            style={styles.settingRow}
-            onPress={() => {
-              setError("");
-              setPasswordVisible(true);
-            }}
+            onPress={logout}
+            style={styles.logoutButton}
           >
-            <View style={styles.settingIcon}>
-              <Ionicons name="key-outline" size={20} color="#208AEF" />
-            </View>
-            <View style={styles.settingText}>
-              <Text style={styles.settingTitle}>Change password</Text>
-              <Text style={styles.settingMeta}>Update your account password</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+            <Ionicons name="log-out-outline" size={19} color="#BE123C" />
+            <Text style={styles.logoutText}>{t('logout', selectedLanguage)}</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.settingRow}
-            onPress={onFavorites}
-          >
-            <View style={styles.settingIcon}>
-              <Ionicons name="heart-outline" size={20} color="#208AEF" />
-            </View>
-            <View style={styles.settingText}>
-              <Text style={styles.settingTitle}>Favorites</Text>
-              <Text style={styles.settingMeta}>View your saved provider products</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.panel}>
-          <Text style={styles.sectionTitle}>Favorite Stores</Text>
-          {favoriteStoresLoading ? (
-            <Text style={styles.empty}>Loading favorite stores...</Text>
-          ) : favoriteStoreItems.length === 0 ? (
-            <Text style={styles.empty}>No favorites yet.</Text>
-          ) : (
-            <FlatList
-              data={favoriteStoreItems}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-              renderItem={({ item }) => (
-                <View style={styles.favoriteRow}>
-                  <Text style={styles.favoriteName}>{item.name}</Text>
-                  <Text style={styles.favoriteMeta}>
-                    {item.address ?? "Local store"}
-                  </Text>
-                </View>
-              )}
-            />
-          )}
-          {favoriteStoresError ? (
-            <Text style={styles.error}>{favoriteStoresError}</Text>
-          ) : null}
-        </View>
-
-        <TouchableOpacity
-          onPress={logout}
-          style={styles.logoutButton}
-        >
-          <Ionicons name="log-out-outline" size={19} color="#BE123C" />
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <Modal
         visible={passwordVisible}

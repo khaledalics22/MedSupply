@@ -121,12 +121,12 @@ export default function Search({ language, onProductSelected }: SearchProps) {
     <View style={styles.container}>
       <View style={styles.header}>
         <SearchBar value={query} onChangeText={setQuery} placeholder={t('searchProducts', language)} placeholderTextColor="rgba(255,255,255,0.8)" showFilterButton onFilterPress={() => setShowFilterMenu((value) => !value)} />
-        {query.length > 0 ? <TouchableOpacity onPress={() => { setQuery(''); setDebouncedQuery(''); }} style={styles.clearSearch}><Text style={styles.clearSearchText}>Clear</Text></TouchableOpacity> : null}
+        {query.length > 0 ? <TouchableOpacity onPress={() => { setQuery(''); setDebouncedQuery(''); }} style={styles.clearSearch}><Text style={styles.clearSearchText}>{t('clear', language)}</Text></TouchableOpacity> : null}
       </View>
 
       {showFilterMenu ? (
         <View style={styles.dropDownMenu}>
-          <Text style={styles.menuHeader}>Sort and availability</Text>
+          <Text style={styles.menuHeader}>{t('sortAndAvailability', language)}</Text>
           {([
             ['none', 'No sort'], ['priceAsc', 'Lowest pharmacist price'], ['priceDesc', 'Highest pharmacist price'], ['discount', 'Highest discount'],
           ] as const).map(([value, label]) => (
@@ -157,12 +157,12 @@ export default function Search({ language, onProductSelected }: SearchProps) {
       </View>
 
       <View style={styles.discountRow}>
-        <Text style={styles.discountLabel}>Minimum discount</Text>
+        <Text style={styles.discountLabel}>{t('minimumDiscount', language)}</Text>
         <TextInput value={minDiscount} onChangeText={setMinDiscount} keyboardType="numeric" placeholder="0" style={styles.discountInput} />
         {activeFilterCount > 0 ? <TouchableOpacity style={styles.clearFilters} onPress={clearFilters}><Text style={styles.clearFiltersText}>Clear ({activeFilterCount})</Text></TouchableOpacity> : null}
       </View>
 
-      {loading ? <Text style={styles.emptyState}>Loading products...</Text> : error ? <Text style={styles.emptyState}>{error}</Text> : null}
+      {loading ? <Text style={styles.emptyState}>{t('loadingProducts', language)}...</Text> : error ? <Text style={styles.emptyState}>{error}</Text> : null}
 
       <FlatList
         data={items}

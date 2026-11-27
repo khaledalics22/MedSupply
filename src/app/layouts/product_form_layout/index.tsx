@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
-import { Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import type { Product, ProductInput, ProducerType } from '../../models/data_types';
 import { iocContainer } from '../../models/ioc_container';
@@ -116,7 +116,7 @@ export default function ProductFormLayout({ providerType, providerId, product, o
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={styles.header}><TouchableOpacity style={styles.backButton} onPress={onBack}><Ionicons name="arrow-back" size={20} color="#FFFFFF" /></TouchableOpacity><Text style={styles.title}>{product ? 'Edit Product' : 'Add Product'}</Text><View style={styles.space} /></View>
       <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
         {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -138,7 +138,7 @@ export default function ProductFormLayout({ providerType, providerId, product, o
         <TouchableOpacity style={styles.saveButton} onPress={() => { const validation = validate(); if (validation) setError(validation); else setConfirm(true); }} disabled={saving}><Text style={styles.saveText}>{saving ? 'Saving...' : product ? 'Save Changes' : 'Add Product'}</Text></TouchableOpacity>
       </ScrollView>
       <Modal visible={confirm} transparent animationType="fade" onRequestClose={() => setConfirm(false)}><View style={styles.modalBackdrop}><View style={styles.modalCard}><Text style={styles.modalTitle}>{product ? 'Save product changes?' : 'Add this product?'}</Text><Text style={styles.modalText}>Please confirm the provider-specific product details.</Text><View style={styles.modalActions}><TouchableOpacity style={styles.cancelButton} onPress={() => setConfirm(false)}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity><TouchableOpacity style={styles.confirmButton} onPress={save}><Text style={styles.confirmText}>Confirm</Text></TouchableOpacity></View></View></View></Modal>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

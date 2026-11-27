@@ -2,6 +2,8 @@ import { Image, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { Product, Store } from '../../utils/types';
 import styles from './styles';
+import { useAppState } from '../../state/app_state';
+import { t } from '../../i18n';
 
 export type ProductCardProps = {
   product: Product;
@@ -36,6 +38,7 @@ export default function ProductCard({
   isFavorite = false,
   onToggleFavorite,
 }: ProductCardProps) {
+  const { language } = useAppState();
   const consumerPrice = product.consumerPrice;
   const pharmacyPrice = product.pharmacyPriceAfterDiscount;
   const discount = product.discountPercentage;
@@ -45,7 +48,7 @@ export default function ProductCard({
   return (
     <View style={styles.container}>
       {onToggleFavorite ? (
-        <TouchableOpacity style={styles.favoriteButton} onPress={onToggleFavorite} activeOpacity={0.8} accessibilityLabel={isFavorite ? 'Remove from favorites' : 'Add to favorites'}>
+        <TouchableOpacity style={styles.favoriteButton} onPress={onToggleFavorite} activeOpacity={0.8} accessibilityLabel={isFavorite ? t('removeFromFavorites', language) : t('addToFavorites', language)}>
           <Ionicons name={isFavorite ? 'heart' : 'heart-outline'} size={22} color={isFavorite ? '#FF4D67' : '#94A3B8'} />
         </TouchableOpacity>
       ) : null}
@@ -54,7 +57,7 @@ export default function ProductCard({
         <Image source={{ uri: product.image ?? 'https://picsum.photos/seed/product/120' }} style={styles.image} />
         <Text style={styles.name} numberOfLines={1}>{product.name}</Text>
         {variantText ? <Text style={styles.variantText} numberOfLines={1}>{variantText}</Text> : null}
-        {showDescription && <Text style={styles.description} numberOfLines={2}>{product.description ?? 'No description available'}</Text>}
+        {showDescription && <Text style={styles.description} numberOfLines={2}>{product.description ?? t('noDescriptionAvailable', language)}</Text>}
         {showStore && sellerName && <Text style={styles.storeName} numberOfLines={1}>{sellerName}</Text>}
       </TouchableOpacity>
 
@@ -67,7 +70,7 @@ export default function ProductCard({
       </View>
 
       {!product.isAvailable || product.stockQuantity <= 0 ? (
-        <View style={styles.unavailableButton}><Text style={styles.unavailableText}>Out of stock</Text></View>
+        <View style={styles.unavailableButton}><Text style={styles.unavailableText}>{t('outOfStock', language)}</Text></View>
       ) : cartQuantity > 0 && onDecreaseQuantity && onIncreaseQuantity ? (
         <View style={styles.quantityRow}>
           <TouchableOpacity onPress={onDecreaseQuantity} style={styles.quantityButton} activeOpacity={0.8}><Text style={styles.quantityButtonText}>-</Text></TouchableOpacity>
@@ -81,7 +84,7 @@ export default function ProductCard({
           </TouchableOpacity>
         </View>
       ) : onAddToCart ? (
-        <TouchableOpacity onPress={onAddToCart} style={styles.addButton} activeOpacity={0.8}><Text style={styles.addButtonText}>Add to cart</Text></TouchableOpacity>
+        <TouchableOpacity onPress={onAddToCart} style={styles.addButton} activeOpacity={0.8}><Text style={styles.addButtonText}>{t('addToCart', language)}</Text></TouchableOpacity>
       ) : null}
     </View>
   );

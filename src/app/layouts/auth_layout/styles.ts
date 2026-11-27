@@ -33,4 +33,9 @@ export default StyleSheet.create({
   secondaryButton: { flex: 1, height: 48, borderRadius: 12, borderWidth: 1, borderColor: '#D9E3EF', alignItems: 'center', justifyContent: 'center' },
   secondaryText: { color: '#334E68', fontWeight: '800' },
   loadingText: { color: '#FFFFFF', fontWeight: '800' },
+  languageRow: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 16 },
+  languageButton: { height: 38, borderRadius: 10, borderWidth: 1, borderColor: '#D9E3EF', backgroundColor: '#FFFFFF', paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' },
+  languageButtonActive: { borderColor: '#208AEF', backgroundColor: '#EEF6FF' },
+  languageText: { color: '#64748B', fontWeight: '800' },
+  languageTextActive: { color: '#208AEF' },
 });

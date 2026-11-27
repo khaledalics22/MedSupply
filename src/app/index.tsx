@@ -273,7 +273,11 @@ function RoleBasedApp() {
   }
 
   if (!user) return <AuthLayout />;
-  if (user.role === 'admin') return <AdminApp />;
+  if (user.role === 'admin') return (
+    <SafeAreaView edges={['top', 'bottom']} style={styles.container}>
+      <AdminApp />
+    </SafeAreaView>
+  );
 
   return <AppContent />;
 }

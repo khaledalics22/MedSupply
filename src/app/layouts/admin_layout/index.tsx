@@ -6,6 +6,8 @@ import { iocContainer } from '../../models/ioc_container';
 import { getStockStatus } from '../../models/database';
 import { authService } from '../../models/auth_service';
 import { useAuthState } from '../../state/auth_state';
+import { t } from '../../i18n';
+import { useAppState } from '../../state/app_state';
 import styles from './styles';
 
 type SummaryCardProps = {
@@ -39,6 +41,7 @@ export default function AdminLayout({ onStoreManagement, onAddStore, onManufactu
   onPharmacists: (status?: 'all' | 'pending' | 'active' | 'rejected' | 'inactive') => void;
 }) {
   const { user, logout } = useAuthState();
+  const { language } = useAppState();
   const database = iocContainer.getDatabase();
   const [pharmacists, setPharmacists] = useState<import('../../models/auth').User[]>([]);
   const [stores, setStores] = useState<import('../../models/data_types').Store[]>([]);
@@ -139,7 +142,7 @@ export default function AdminLayout({ onStoreManagement, onAddStore, onManufactu
 
         <View style={styles.emptyState}>
           <Ionicons name="reload" size={32} color="#208AEF" />
-          <Text style={styles.emptyTitle}>Loading dashboard data...</Text>
+          <Text style={styles.emptyTitle}>{t('loadingDashboard', language)}</Text>
         </View>
       </View>
     );
@@ -165,10 +168,10 @@ export default function AdminLayout({ onStoreManagement, onAddStore, onManufactu
 
         <View style={styles.emptyState}>
           <Ionicons name="warning-outline" size={32} color="#BE123C" />
-          <Text style={styles.emptyTitle}>Unable to load dashboard</Text>
+          <Text style={styles.emptyTitle}>{t('unableLoadDashboard', language)}</Text>
           <Text style={styles.emptyText}>{dashboardError}</Text>
           <TouchableOpacity style={styles.viewAllButton} onPress={() => setDashboardRefresh((value) => value + 1)}>
-            <Text style={styles.viewAllText}>Retry</Text>
+            <Text style={styles.viewAllText}>{t('retry', language)}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -213,7 +216,7 @@ export default function AdminLayout({ onStoreManagement, onAddStore, onManufactu
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <Text style={styles.sectionTitle}>{t('quickActions', language)}</Text>
           <View style={styles.actionGrid}>
             {actions.map((action) => (
               <TouchableOpacity
@@ -232,15 +235,15 @@ export default function AdminLayout({ onStoreManagement, onAddStore, onManufactu
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Pending Orders</Text>
+            <Text style={styles.sectionTitle}>{t('pendingOrders', language)}</Text>
             {pendingOrders.length > 0 ? <Text style={styles.previewCount}>{pendingOrders.length} awaiting review</Text> : null}
           </View>
 
           {pendingPreview.length === 0 ? (
             <View style={styles.emptyState}>
               <View style={styles.emptyIcon}><Ionicons name="checkmark-done-outline" size={26} color="#208AEF" /></View>
-              <Text style={styles.emptyTitle}>No pending orders</Text>
-              <Text style={styles.emptyText}>New pharmacist orders will appear here.</Text>
+              <Text style={styles.emptyTitle}>{t('noPendingOrders', language)}</Text>
+              <Text style={styles.emptyText}>{t('pendingOrdersHint', language)}</Text>
             </View>
           ) : (
             <View>

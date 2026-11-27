@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { I18nManager } from 'react-native';
 
 import { LanguageCode } from '../i18n';
 import { iocContainer } from '../models/ioc_container';
@@ -52,14 +53,14 @@ const initialNotifications: NotificationItem[] = [
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const { user } = useAuthState();
-  const [language, setLanguage] = useState<LanguageCode>('en');
+  const [language, setLanguageState] = useState<LanguageCode>('en');
   const [cart, setCart] = useState<CartItem[]>([]);
   const cartRef = useRef<CartItem[]>([]);
   const cartMutationQueue = useRef(Promise.resolve());
   const cartMutationPending = useRef(0);
   const [cartMutating, setCartMutating] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>(initialNotifications);
-  const [favoriteStores, setFavoriteStores] = useState<string[]>(['store-1']);
+  const [favoriteStores, setFavoriteStores] = useState<string[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState('');
@@ -261,7 +262,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   };
 
   const toggleFavoriteStore = (storeId: string) => {
-    setFavoriteStores((previous) => previous.includes(storeId) ? previous.filter((id) => id !== storeId) : [...previous, storeId]);
+    if (!user?.id) return;
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(storeId)) return;
+    setFavoriteStores((previous) => {
+      const next = previous.includes(storeId)
+        ? previous.filter((id) => id !== storeId)
+        : [...previous, storeId];
+      void AsyncStorage.setItem(`medsupply.favorites.stores.${user.id}`, JSON.stringify(next)).catch(() => undefined);
+      return next;
+    });
   };
 
   const toggleFavoriteProduct = (productId: string) => {
@@ -384,6 +393,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     return report;
   });
 
+  const setLanguage = (nextLanguage: LanguageCode) => {
+    setLanguageState(nextLanguage);
+    const nextRtl = nextLanguage === 'ar';
+    if (I18nManager.isRTL !== nextRtl) {
+      I18nManager.allowRTL(nextRtl);
+      I18nManager.forceRTL(nextRtl);
+    }
+    void AsyncStorage.setItem('medsupply.language', nextLanguage).catch(() => undefined);
+  };
+
   const cartCount = useMemo(() => cart.reduce((sum, item) => sum + item.quantity, 0), [cart]);
   const cartTotal = useMemo(() => cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0), [cart]);
   const unreadNotifications = useMemo(() => notifications.filter((notification) => !notification.read).length, [notifications]);
@@ -417,33 +436,40 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true;
-    if (!user?.id || user.role !== 'pharmacist') {
-      setOrders([]);
-      setOrdersLoading(false);
-      setOrdersError('');
-      return () => { active = false; };
-    }
-
-    setOrdersLoading(true);
-    setOrdersError('');
-
     void (async () => {
       try {
-        const database = iocContainer.getDatabase();
-        if (typeof database.getOwnOrdersAsync !== 'function') {
-          throw new Error('Database getOwnOrdersAsync is unavailable.');
+        const stored = await AsyncStorage.getItem('medsupply.language');
+        if (!active) return;
+        const initialLanguage: LanguageCode = stored === 'ar' ? 'ar' : 'en';
+        setLanguageState(initialLanguage);
+        const nextRtl = initialLanguage === 'ar';
+        if (I18nManager.isRTL !== nextRtl) {
+          I18nManager.allowRTL(nextRtl);
+          I18nManager.forceRTL(nextRtl);
         }
-        const persisted = await database.getOwnOrdersAsync(user.id);
-        if (active) setOrders(persisted);
-      } catch (caught) {
-        if (active) setOrdersError(caught instanceof Error ? caught.message : 'Unable to load orders.');
-      } finally {
-        if (active) setOrdersLoading(false);
+      } catch {
+        setLanguageState('en');
       }
     })();
-
     return () => { active = false; };
-  }, [user?.id, user?.role]);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    const key = user?.id ? `medsupply.favorites.stores.${user.id}` : null;
+    if (!key) { setFavoriteStores([]); return; }
+    void (async () => {
+      try {
+        const stored = await AsyncStorage.getItem(key);
+        if (!active) return;
+        const parsed = stored ? JSON.parse(stored) : [];
+        setFavoriteStores(Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) : []);
+      } catch {
+        setFavoriteStores([]);
+      }
+    })();
+    return () => { active = false; };
+  }, [user?.id]);
 
   useEffect(() => {
     let active = true;

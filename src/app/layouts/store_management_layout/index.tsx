@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
+import FilterPanel from '../../components/filter_panel';
 import type { Store } from '../../models/data_types';
 import { iocContainer } from '../../models/ioc_container';
 import styles from './styles';
@@ -13,6 +14,8 @@ export default function StoreManagementLayout({ refreshToken = 0, onBack, onAddS
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -25,21 +28,29 @@ export default function StoreManagementLayout({ refreshToken = 0, onBack, onAddS
     return () => { active = false; };
   }, [version, refreshToken]);
 
-  const filteredStores = stores.filter((store) => store.name.toLowerCase().includes(query.trim().toLowerCase()));
+  const filteredStores = stores.filter((store) => {
+    const matchesStatus = statusFilter === 'all' || store.status === statusFilter;
+    const matchesQuery = store.name.toLowerCase().includes(query.trim().toLowerCase());
+    return matchesStatus && matchesQuery;
+  });
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={onBack}><Ionicons name="arrow-back" size={20} color="#FFFFFF" /></TouchableOpacity>
-        <Text style={styles.title}>Store Management</Text>
+        <Text style={styles.title}>{'Store Management'}</Text>
         <TouchableOpacity style={styles.addButton} onPress={onAddStore}><Ionicons name="add" size={22} color="#FFFFFF" /></TouchableOpacity>
       </View>
       <View style={styles.searchRow}>
         <Ionicons name="search" size={20} color="#718096" />
-        <TextInput value={query} onChangeText={setQuery} placeholder="Search stores by name" style={styles.searchInput} />
+        <TextInput value={query} onChangeText={setQuery} placeholder={'Search...'} style={styles.searchInput} />
+        <TouchableOpacity style={styles.filterButton} onPress={() => setShowFilters((visible) => !visible)}><Ionicons name="options" size={18} color="#208AEF" /></TouchableOpacity>
       </View>
-      {loading ? <Text style={styles.emptyText}>Loading stores...</Text> : error ? <Text style={styles.emptyText}>{error}</Text> : filteredStores.length === 0 ?
-        <View style={styles.emptyState}><Ionicons name="storefront-outline" size={38} color="#94A3B8" /><Text style={styles.emptyTitle}>No stores found</Text><Text style={styles.emptyText}>Add a store to start building the marketplace.</Text></View>
+      <FilterPanel visible={showFilters} title={'Filters'} clearLabel={'Clear'} applyLabel={'Apply'} onClear={() => setStatusFilter('all')} onApply={() => setShowFilters(false)}>
+        <View style={styles.filters}>{(['all', 'active', 'inactive'] as const).map((status) => <TouchableOpacity key={status} style={[styles.filter, statusFilter === status && styles.filterActive]} onPress={() => setStatusFilter(status)}><Text style={[styles.filterText, statusFilter === status && styles.filterTextActive]}>{`Status: ${status}`}</Text></TouchableOpacity>)}</View>
+      </FilterPanel>
+      {loading ? <Text style={styles.emptyText}>{'Loading stores...'}</Text> : error ? <Text style={styles.emptyText}>{error}</Text> : filteredStores.length === 0 ?
+        <View style={styles.emptyState}><Ionicons name="storefront-outline" size={38} color="#94A3B8" /><Text style={styles.emptyTitle}>{'No Stores Found'}</Text><Text style={styles.emptyText}>{'Try adjusting your search or filter settings.'}</Text></View>
         :
         <FlatList
           data={filteredStores}
@@ -54,10 +65,10 @@ export default function StoreManagementLayout({ refreshToken = 0, onBack, onAddS
                 <Text style={styles.storeMeta}>{item.contactPerson}</Text>
                 <Text style={styles.storeMeta}>{item.phone}</Text>
                 <Text style={styles.storeMeta} numberOfLines={1}>{item.address}</Text>
-                <Text style={styles.storeMeta}>View products</Text>
+                <Text style={styles.storeMeta}>{'View Products'}</Text>
               </View>
               <View style={[styles.status, item.status === 'active' ? styles.active : styles.inactive]}>
-                <Text style={[styles.statusText, item.status === 'active' ? styles.activeText : styles.inactiveText]}>{item.status}</Text>
+                <Text style={[styles.statusText, item.status === 'active' ? styles.activeText : styles.inactiveText]}>{`Status: ${item.status}`}</Text>
               </View>
             </TouchableOpacity>
           )}

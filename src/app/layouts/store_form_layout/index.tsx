@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
-import { Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import type { Store, StoreInput, StoreStatus } from '../../models/data_types';
 import { iocContainer } from '../../models/ioc_container';
@@ -80,7 +80,7 @@ export default function StoreFormLayout({ storeId, onBack, onSaved }: { storeId?
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={onBack}><Ionicons name="arrow-back" size={20} color="#FFFFFF" /></TouchableOpacity>
         <Text style={styles.title}>{store ? 'Edit Store' : 'Add Store'}</Text>
@@ -120,7 +120,7 @@ export default function StoreFormLayout({ storeId, onBack, onSaved }: { storeId?
           </View>
         </View>
       </Modal>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

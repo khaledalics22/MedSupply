@@ -1,142 +1,95 @@
 export type LanguageCode = 'en' | 'ar';
-
 export const defaultLanguage: LanguageCode = 'en';
-
 export const languageOptions: { code: LanguageCode; label: string }[] = [
-  { code: 'en', label: 'EN' },
-  { code: 'ar', label: 'AR' },
+  { code: 'en', label: 'English' },
+  { code: 'ar', label: 'العربية' },
 ];
 
 export const translations = {
   en: {
-    home: 'Home',
-    search: 'Search',
-    lookFor: 'Look for',
-    addCredit: 'Add credit',
-    searchProducts: 'Search products...',
-    noCategoryFound: 'No category found',
-    noMatchingItems: 'No matching items found',
-    settings: 'Language',
-    open: 'Open',
-    closed: 'Closed',
-    yes: 'Yes',
-    no: 'No',
-    price: 'Price',
-    discount: 'Discount',
-    dosage: 'Dosage',
-    stock: 'Stock',
-    address: 'Address',
-    phone: 'Phone',
-    openHours: 'Open hours',
-    rating: 'Rating',
-    location: 'Location',
-    certification: 'Certification',
-    capacity: 'Capacity',
-    delivery: 'Delivery',
-    availableNow: 'Available now',
+    home: 'Home', search: 'Search', lookFor: 'Look for', addCredit: 'Add credit',
+    searchProducts: 'Search products...', noCategoryFound: 'No category found', noMatchingItems: 'No matching items found',
+    settings: 'Language', open: 'Open', closed: 'Closed', yes: 'Yes', no: 'No',
+    price: 'Price', discount: 'Discount', dosage: 'Dosage', stock: 'Stock', address: 'Address', phone: 'Phone',
+    openHours: 'Open hours', rating: 'Rating', location: 'Location', certification: 'Certification', capacity: 'Capacity',
+    delivery: 'Delivery', availableNow: 'Available now', orders: 'Orders', profile: 'Profile', cart: 'Cart',
+    favorites: 'Favorites', logout: 'Logout', edit: 'Edit', cancel: 'Cancel', save: 'Save', saving: 'Saving...',
+    apply: 'Apply', clear: 'Clear', filter: 'Filter', filters: 'Filters', loading: 'Loading...', retry: 'Retry',
+    emptyFavorites: 'No favorites yet.', emptyCart: 'Your cart is empty.', cartEmpty: 'Your cart is empty.', continueShopping: 'Continue shopping', checkout: 'Checkout', overallTotal: 'Overall total',
+    remove: 'Remove', store: 'Store', manufacturer: 'Manufacturer', allProviders: 'All providers', allStock: 'All stock',
+    active: 'Active', inactive: 'Inactive', available: 'Available', lowStock: 'Low stock', outOfStock: 'Out of stock', outOfStockStatus: 'Out of stock',
+    all: 'All', sortName: 'Name', lowestPrice: 'Lowest price', highestPrice: 'Highest price', highestDiscount: 'Highest discount', lowestStock: 'Lowest stock', highestStock: 'Highest stock',
+    pending: 'Pending', approved: 'Approved', rejected: 'Rejected', completed: 'Completed',
+    welcomeBack: 'Welcome back', createAccount: 'Create pharmacist account', login: 'Login', register: 'Register',
+    loginSubtitle: 'Sign in to continue to MedSupply.', registerSubtitle: 'Register to browse products, manage cart items, and place orders.',
+    fullName: 'Full name', email: 'Email', phoneNumber: 'Phone number', pharmacyName: 'Pharmacy name', pharmacyAddress: 'Pharmacy address',
+    password: 'Password', confirmPassword: 'Confirm password', forgotPassword: 'Forgot password?', pleaseWait: 'Please wait...',
+    newPharmacist: 'New pharmacist?', existingAccount: 'Already have an account?',
+    enterEmailPassword: 'Please enter your email and password.', invalidEmail: 'Please enter a valid email address.',
+    completeRequiredFields: 'Please complete all required fields.', passwordRequirements: 'Password must be at least 8 characters and include a letter and number.',
+    passwordsDoNotMatch: 'Passwords do not match.', registrationSubmitted: 'Registration submitted successfully. Your account is awaiting Admin approval.',
+    authenticationFailed: 'Authentication failed. Please try again.', pressBackAgain: 'Press back again to exit.',
+    personalInformation: 'Personal Information', pharmacyInformation: 'Pharmacy Information', accountSettings: 'Account Settings',
+    changePassword: 'Change password', updatePassword: 'Update your account password', savedProviderProducts: 'View your saved provider products',
+    favoriteStores: 'Favorite Stores', profileUpdated: 'Profile updated successfully.', passwordChanged: 'Password changed successfully.',
+    pleaseCompleteProfile: 'Please complete all required profile fields.', invalidPhone: 'Please enter a valid phone number.',
+    saveChanges: 'Save changes', profilePictureUrl: 'Profile picture URL', currentPassword: 'Current password', newPassword: 'New password', confirmNewPassword: 'Confirm new password', language: 'Language',
+    removeFromFavorites: 'Remove from favorites', addToFavorites: 'Add to favorites', noDescriptionAvailable: 'No description available',
+    addToCart: 'Add to cart', stockLimitReachedFor: 'Stock limit reached for', availableStock: 'Available', storeLabel: 'Store', manufacturerLabel: 'Manufacturer',
+    reviewCart: 'Please review your cart', orderSummary: 'Order Summary', total: 'Total', placingOrder: 'Placing order...', orderPlaced: 'Order placed', placeOrder: 'Place Order', thankYou: 'Thank you. Your order has been submitted.', orderId: 'Order ID', placeOrderModalInfo: 'Review the details and confirm to submit this order.', quantity: 'Quantity',
+    sortAndAvailability: 'Sort and availability', minimumDiscount: 'Minimum discount', noSort: 'No sort', lowestPharmacistPrice: 'Lowest pharmacist price', highestPharmacistPrice: 'Highest pharmacist price', includeOutOfStock: 'Include out-of-stock',
+    adminDashboard: 'Admin Dashboard', loadingDashboard: 'Loading dashboard data...', unableLoadDashboard: 'Unable to load dashboard', quickActions: 'Quick Actions', pendingOrders: 'Pending Orders', noPendingOrders: 'No pending orders', pendingOrdersHint: 'New pharmacist orders will appear here.',
+    addStore: 'Add Store', addManufacturer: 'Add Manufacturer', addProduct: 'Add Product', manageOrders: 'Manage Orders', openManagement: 'Open management', comingSoon: 'Coming soon',
+    totalPharmacists: 'Total Pharmacists', pendingPharmacists: 'Pending Pharmacists', activePharmacists: 'Active Pharmacists', inactivePharmacists: 'Inactive Pharmacists', totalStores: 'Total Stores', activeStores: 'Active Stores', totalManufacturers: 'Total Manufacturers', activeManufacturers: 'Active Manufacturers', productListings: 'Product Listings', activeProducts: 'Active Products', lowStockProducts: 'Low Stock', outOfStockProducts: 'Out of Stock',
+    approvedOrders: 'Approved Orders', rejectedOrders: 'Rejected Orders', completedOrders: 'Completed Orders', viewAll: 'View All', pharmacist: 'Pharmacist', awaitingReview: '{{count}} awaiting review',
+    orderManagement: 'Order Management', searchOrderOrPharmacist: 'Search order ID or pharmacist', allOrders: 'All Orders', loadingOrders: 'Loading orders...', unableLoadOrders: 'Unable to load orders', noOrdersFound: 'No orders found', tryOrderFilter: 'Try another status or search value.',
+    orderDetails: 'Order Details', rejectionReason: 'Rejection reason', providerItems: 'Provider Items', rejectOrder: 'Reject Order', approveOrder: 'Approve Order', completeOrder: 'Complete Order', loadingOrder: 'Loading order...', unableLoadOrder: 'Unable to load order', orderNotFound: 'Order not found',
+    productOverview: 'Product Overview', searchProductDosage: 'Search product or dosage', unableLoadProducts: 'Unable to load products', allCategories: 'All categories', noProductsFound: 'No products found', tryChangeFilters: 'Try clearing or changing filters.',
+    storeManagement: 'Store Management', searchStoresByName: 'Search stores by name', noStoresFound: 'No stores found', addStoreMarketplace: 'Add a store to start building the marketplace.', storeDetails: 'Store Details', loadingStore: 'Loading store...', storeNotFound: 'Store not found', editStore: 'Edit Store',
+    manufacturerManagement: 'Manufacturer Management', searchManufacturersByName: 'Search manufacturers by name', loadingManufacturer: 'Loading manufacturer...', manufacturerNotFound: 'Manufacturer not found', manufacturerDetails: 'Manufacturer Details', noManufacturersFound: 'No manufacturers found', addManufacturerMarketplace: 'Add a manufacturer to expand the marketplace.', editManufacturer: 'Edit Manufacturer',
+    pharmacists: 'Pharmacists', searchPharmacist: 'Search name, pharmacy, email or phone', loadingPharmacists: 'Loading pharmacists...', pharmacistDetails: 'Pharmacist Details', pharmacistNotFound: 'Pharmacist not found', loadingPharmacist: 'Loading pharmacist...', pharmacyNameLabel: 'Pharmacy name', notProvided: 'Not provided', addressUnavailable: 'Address unavailable', phoneUnavailable: 'Phone unavailable', registered: 'Registered',
+    approve: 'Approve', reject: 'Reject', complete: 'Complete', confirm: 'Confirm', deactivate: 'Deactivate', reactivate: 'Reactivate', deactivateAccount: 'Deactivate account', reactivateAccount: 'Reactivate account', pharmacyInformationLabel: 'Pharmacy Information', rejectionReasonRequired: 'A rejection reason is required.', pharmacistApproved: 'Pharmacist approved successfully.', pharmacistRejected: 'Pharmacist rejected successfully.', pharmacistDeactivated: 'Pharmacist account deactivated.', pharmacistReactivated: 'Pharmacist account reactivated.',
+    loadingProducts: 'Loading products...', noMatchingProducts: 'No matching products', searchProductsByName: 'Search products by name', contactPerson: 'Contact person', status: 'Status', productName: 'Product name', editProduct: 'Edit Product', manufacturerName: 'Manufacturer name', description: 'Description', viewProducts: 'View products',
+    minimumOrderValue: 'Minimum Order Value (EGP)', productDetails: 'Product details', category: 'Category', consumerPrice: 'Consumer price', pharmacistPrice: 'Pharmacist price', stockQuantity: 'Stock quantity', productImageUrl: 'Product image URL', expiryDate: 'Expiry date', availability: 'Availability', similarProducts: 'Similar existing products', noDosage: 'No dosage', exactDuplicate: 'Exact duplicate',
+    loadingSpecialties: 'Loading specialties...', noSpecialties: 'No specialties available.', favoritesTitle: 'Favorites', searchFavorites: 'Search favorites by name or dosage', noFavoritesFound: 'No favorites found', saveProviderProducts: 'Save provider-owned products to find them quickly here.', unavailableProvider: 'Unavailable: provider inactive, product inactive, or out of stock',
+    beautyProducts: 'Beauty Products', bestPrices: 'Best Prices', manufacturers: 'Manufacturers', specialties: 'Specialties', specialty: 'Specialty', notifications: 'Notifications', noStoresAvailable: 'No stores available.', noManufacturersAvailable: 'No manufacturers available.', noSpecialtiesAvailable: 'No specialties available.', noBeautyProducts: 'No beauty products available.', noMatchingManufacturerProducts: 'No matching manufacturer products found.', noStoreProducts: 'No products available for this store.', noPendingOrdersSimple: 'No pending orders.', noPreviousOrders: 'No previous orders.',
+    loadingProduct: 'Loading product...', unableLoadProduct: 'Unable to load product', productNotFound: 'Product not found', loadingFavorites: 'Loading...', loadingStores: 'Loading stores...', loadingManufacturers: 'Loading manufacturers...', back: 'Back', delete: 'Delete', deleteProductQuestion: 'Delete product?', activateStoreQuestion: 'Activate store?', deactivateStoreQuestion: 'Deactivate store?', trustedMarketplace: 'Trusted pharmacy marketplace', name: 'Name', english: 'English', arabic: 'Arabic', cartItems: 'Cart, {{count}} items',
+    unableLoadStore: 'Unable to load store', unableLoadManufacturer: 'Unable to load manufacturer', unableLoadProducts: 'Unable to load products', unableLoadManufacturers: 'Unable to load manufacturers', unableLoadStores: 'Unable to load stores', loadingManufacturer: 'Loading manufacturer...', loadingStore: 'Loading store...', storeNotFound: 'Store not found', manufacturerNotFound: 'Manufacturer not found',
+    dosageUnspecified: 'Dosage unspecified', inStock: 'in stock', tryDifferentSearch: 'Try a different search or status filter.', consumerWithPrice: 'Consumer {{price}}', pharmacyNotProvided: 'Pharmacy not provided', registeredLabel: 'Registered', products: 'Products', activate: 'Activate', productDeleted: 'Product deleted successfully.', unableDeleteProduct: 'Unable to delete product.', unableUpdateProductStatus: 'Unable to update product status.', unableUpdateStoreStatus: 'Unable to update store status.', storeActivated: 'Store activated successfully.', storeDeactivated: 'Store deactivated successfully.',
+    deleteProductConfirmation: 'This product will be removed from normal management and pharmacist listings. Historical orders will remain unchanged.', deactivateStoreHint: 'The store will no longer be available to pharmacists. Products and historical orders will be preserved.', activateStoreHint: 'The store and its available products will return to pharmacist marketplace browsing.',
   },
   ar: {
-    home: 'الرئيسية',
-    search: 'بحث',
-    lookFor: 'ابحث عن',
-    addCredit: 'إضافة رصيد',
-    searchProducts: 'ابحث عن المنتجات...',
-    noCategoryFound: 'لا توجد فئة',
-    noMatchingItems: 'لا توجد عناصر مطابقة',
-    settings: 'اللغة',
-    open: 'مفتوح',
-    closed: 'مغلق',
-    yes: 'نعم',
-    no: 'لا',
-    price: 'السعر',
-    discount: 'التخفيض',
-    dosage: 'الجرعة',
-    stock: 'المخزون',
-    address: 'العنوان',
-    phone: 'الهاتف',
-    openHours: 'ساعات العمل',
-    rating: 'التقييم',
-    location: 'الموقع',
-    certification: 'الشهادة',
-    capacity: 'السعة',
-    delivery: 'التوصيل',
-    availableNow: 'متاح الآن',
+    home: 'الرئيسية', search: 'بحث', lookFor: 'ابحث عن', addCredit: 'إضافة رصيد', searchProducts: 'ابحث عن المنتجات...', noCategoryFound: 'لا توجد فئة', noMatchingItems: 'لا توجد عناصر مطابقة',
+    settings: 'اللغة', open: 'مفتوح', closed: 'مغلق', yes: 'نعم', no: 'لا', price: 'السعر', discount: 'التخفيض', dosage: 'الجرعة', stock: 'المخزون', address: 'العنوان', phone: 'الهاتف', openHours: 'ساعات العمل', rating: 'التقييم', location: 'الموقع', certification: 'الشهادة', capacity: 'السعة', delivery: 'التوصيل', availableNow: 'متاح الآن',
+    orders: 'الطلبات', profile: 'الملف الشخصي', cart: 'السلة', favorites: 'المفضلة', logout: 'تسجيل الخروج', edit: 'تعديل', cancel: 'إلغاء', save: 'حفظ', saving: 'جارٍ الحفظ...', apply: 'تطبيق', clear: 'مسح', filter: 'تصفية', filters: 'الفلاتر', loading: 'جارٍ التحميل...', retry: 'إعادة المحاولة',
+    emptyFavorites: 'لا توجد عناصر مفضلة.', emptyCart: 'سلتك فارغة.', cartEmpty: 'سلتك فارغة.', continueShopping: 'متابعة التسوق', checkout: 'إتمام الشراء', overallTotal: 'الإجمالي', remove: 'إزالة', store: 'متجر', manufacturer: 'مصنع', allProviders: 'جميع المزودين', allStock: 'جميع المخزون',
+    active: 'نشط', inactive: 'غير نشط', available: 'متاح', lowStock: 'مخزون منخفض', outOfStock: 'نفد المخزون', outOfStockStatus: 'نفد المخزون', all: 'الكل', sortName: 'الاسم', lowestPrice: 'الأقل سعراً', highestPrice: 'الأعلى سعراً', highestDiscount: 'أعلى خصم', lowestStock: 'أقل مخزون', highestStock: 'أعلى مخزون', pending: 'قيد الانتظار', approved: 'معتمد', rejected: 'مرفوض', completed: 'مكتمل',
+    welcomeBack: 'مرحباً بعودتك', createAccount: 'إنشاء حساب صيدلي', login: 'تسجيل الدخول', register: 'إنشاء حساب', loginSubtitle: 'سجّل الدخول للمتابعة إلى MedSupply.', registerSubtitle: 'سجّل لتصفح المنتجات وإدارة السلة وإنشاء الطلبات.', fullName: 'الاسم الكامل', email: 'البريد الإلكتروني', phoneNumber: 'رقم الهاتف', pharmacyName: 'اسم الصيدلية', pharmacyAddress: 'عنوان الصيدلية', password: 'كلمة المرور', confirmPassword: 'تأكيد كلمة المرور', forgotPassword: 'نسيت كلمة المرور؟', pleaseWait: 'يرجى الانتظار...', newPharmacist: 'صيدلي جديد؟', existingAccount: 'لديك حساب بالفعل؟', enterEmailPassword: 'يرجى إدخال البريد الإلكتروني وكلمة المرور.', invalidEmail: 'يرجى إدخال بريد إلكتروني صالح.', completeRequiredFields: 'يرجى إكمال جميع الحقول المطلوبة.', passwordRequirements: 'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل وتحتوي على حرف ورقم.', passwordsDoNotMatch: 'كلمتا المرور غير متطابقتين.', registrationSubmitted: 'تم إرسال التسجيل بنجاح. حسابك بانتظار موافقة المسؤول.', authenticationFailed: 'تعذر تسجيل الدخول. يرجى المحاولة مرة أخرى.', pressBackAgain: 'اضغط رجوع مرة أخرى للخروج.',
+    personalInformation: 'المعلومات الشخصية', pharmacyInformation: 'معلومات الصيدلية', accountSettings: 'إعدادات الحساب', changePassword: 'تغيير كلمة المرور', updatePassword: 'تحديث كلمة مرور حسابك', savedProviderProducts: 'عرض منتجات المزودين المحفوظة', favoriteStores: 'المخازن المفضلة', profileUpdated: 'تم تحديث الملف الشخصي بنجاح.', passwordChanged: 'تم تغيير كلمة المرور بنجاح.', pleaseCompleteProfile: 'يرجى إكمال حقول الملف الشخصي المطلوبة.', invalidPhone: 'يرجى إدخال رقم هاتف صالح.', saveChanges: 'حفظ التغييرات', profilePictureUrl: 'رابط صورة الملف الشخصي', currentPassword: 'كلمة المرور الحالية', newPassword: 'كلمة المرور الجديدة', confirmNewPassword: 'تأكيد كلمة المرور الجديدة', language: 'اللغة',
+    removeFromFavorites: 'إزالة من المفضلة', addToFavorites: 'إضافة إلى المفضلة', noDescriptionAvailable: 'لا يوجد وصف متاح', addToCart: 'إضافة إلى السلة', stockLimitReachedFor: 'تم الوصول إلى حد المخزون لـ', availableStock: 'متاح', storeLabel: 'متجر', manufacturerLabel: 'مصنع', reviewCart: 'يرجى مراجعة السلة', orderSummary: 'ملخص الطلب', total: 'الإجمالي', placingOrder: 'جارٍ تقديم الطلب...', orderPlaced: 'تم تقديم الطلب', placeOrder: 'تأكيد الطلب', thankYou: 'شكراً لك. تم إرسال طلبك.', orderId: 'رقم الطلب', placeOrderModalInfo: 'راجع التفاصيل ثم أكد لإرسال الطلب.', quantity: 'الكمية',
+    sortAndAvailability: 'الترتيب والتوفر', minimumDiscount: 'الحد الأدنى للتخفيض', noSort: 'بدون ترتيب', lowestPharmacistPrice: 'أقل سعر للصيدلي', highestPharmacistPrice: 'أعلى سعر للصيدلي', includeOutOfStock: 'تضمين غير المتاح',
+    adminDashboard: 'لوحة تحكم المسؤول', loadingDashboard: 'جارٍ تحميل بيانات لوحة التحكم...', unableLoadDashboard: 'تعذر تحميل لوحة التحكم', quickActions: 'إجراءات سريعة', pendingOrders: 'الطلبات المعلقة', noPendingOrders: 'لا توجد طلبات معلقة', pendingOrdersHint: 'ستظهر طلبات الصيادلة الجدد هنا.', addStore: 'إضافة متجر', addManufacturer: 'إضافة مصنع', addProduct: 'إضافة منتج', manageOrders: 'إدارة الطلبات', openManagement: 'فتح الإدارة', comingSoon: 'قريباً',
+    totalPharmacists: 'إجمالي الصيادلة', pendingPharmacists: 'صيادلة بانتظار الموافقة', activePharmacists: 'الصيادلة النشطون', inactivePharmacists: 'الصيادلة غير النشطين', totalStores: 'إجمالي المتاجر', activeStores: 'المتاجر النشطة', totalManufacturers: 'إجمالي المصانع', activeManufacturers: 'المصانع النشطة', productListings: 'قوائم المنتجات', activeProducts: 'المنتجات النشطة', lowStockProducts: 'مخزون منخفض', outOfStockProducts: 'نفد المخزون', approvedOrders: 'الطلبات المعتمدة', rejectedOrders: 'الطلبات المرفوضة', completedOrders: 'الطلبات المكتملة', viewAll: 'عرض الكل', pharmacist: 'صيدلي', awaitingReview: '{{count}} بانتظار المراجعة',
+    orderManagement: 'إدارة الطلبات', searchOrderOrPharmacist: 'البحث برقم الطلب أو الصيدلي', allOrders: 'جميع الطلبات', loadingOrders: 'جارٍ تحميل الطلبات...', unableLoadOrders: 'تعذر تحميل الطلبات', noOrdersFound: 'لا توجد طلبات', tryOrderFilter: 'جرّب حالة أو قيمة بحث أخرى.', orderDetails: 'تفاصيل الطلب', rejectionReason: 'سبب الرفض', providerItems: 'مواد المزود', rejectOrder: 'رفض الطلب', approveOrder: 'اعتماد الطلب', completeOrder: 'إكمال الطلب', loadingOrder: 'جارٍ تحميل الطلب...', unableLoadOrder: 'تعذر تحميل الطلب', orderNotFound: 'الطلب غير موجود',
+    productOverview: 'نظرة عامة على المنتجات', searchProductDosage: 'البحث عن منتج أو جرعة', unableLoadProducts: 'تعذر تحميل المنتجات', allCategories: 'جميع الفئات', noProductsFound: 'لا توجد منتجات', tryChangeFilters: 'جرّب مسح الفلاتر أو تغييرها.', storeManagement: 'إدارة المتاجر', searchStoresByName: 'البحث عن المتاجر بالاسم', noStoresFound: 'لا توجد متاجر', addStoreMarketplace: 'أضف متجرًا لبدء بناء السوق.', storeDetails: 'تفاصيل المتجر', loadingStore: 'جارٍ تحميل المتجر...', storeNotFound: 'المتجر غير موجود', editStore: 'تعديل المتجر', manufacturerManagement: 'إدارة المصانع', searchManufacturersByName: 'البحث عن المصانع بالاسم', loadingManufacturer: 'جارٍ تحميل المصنع...', manufacturerNotFound: 'المصنع غير موجود', manufacturerDetails: 'تفاصيل المصنع', noManufacturersFound: 'لا توجد مصانع', addManufacturerMarketplace: 'أضف مصنعًا لتوسيع السوق.', editManufacturer: 'تعديل المصنع',
+    pharmacists: 'الصيادلة', searchPharmacist: 'البحث بالاسم أو الصيدلية أو البريد أو الهاتف', loadingPharmacists: 'جارٍ تحميل الصيادلة...', pharmacistDetails: 'تفاصيل الصيدلي', pharmacistNotFound: 'الصيدلي غير موجود', loadingPharmacist: 'جارٍ تحميل الصيدلي...', pharmacyNameLabel: 'اسم الصيدلية', notProvided: 'غير مذكور', addressUnavailable: 'العنوان غير متوفر', phoneUnavailable: 'الهاتف غير متوفر', registered: 'مسجل', approve: 'اعتماد', reject: 'رفض', complete: 'إكمال', confirm: 'تأكيد', deactivate: 'تعطيل', reactivate: 'إعادة تفعيل', deactivateAccount: 'تعطيل الحساب', reactivateAccount: 'إعادة تفعيل الحساب', pharmacyInformationLabel: 'معلومات الصيدلية', rejectionReasonRequired: 'سبب الرفض مطلوب.', pharmacistApproved: 'تم اعتماد الصيدلي بنجاح.', pharmacistRejected: 'تم رفض الصيدلي بنجاح.', pharmacistDeactivated: 'تم تعطيل حساب الصيدلي.', pharmacistReactivated: 'تمت إعادة تفعيل حساب الصيدلي.',
+    loadingProducts: 'جارٍ تحميل المنتجات...', noMatchingProducts: 'لا توجد منتجات مطابقة', searchProductsByName: 'البحث عن المنتجات بالاسم', contactPerson: 'الشخص المسؤول', status: 'الحالة', productName: 'اسم المنتج', editProduct: 'تعديل المنتج', manufacturerName: 'اسم المصنع', description: 'الوصف', viewProducts: 'عرض المنتجات', minimumOrderValue: 'الحد الأدنى لقيمة الطلب (جنيه)', productDetails: 'تفاصيل المنتج', category: 'الفئة', consumerPrice: 'سعر المستهلك', pharmacistPrice: 'سعر الصيدلي', stockQuantity: 'كمية المخزون', productImageUrl: 'رابط صورة المنتج', expiryDate: 'تاريخ الانتهاء', availability: 'التوفر', similarProducts: 'منتجات مماثلة موجودة', noDosage: 'بدون جرعة', exactDuplicate: 'مطابق تماماً',
+    loadingSpecialties: 'جارٍ تحميل التخصصات...', noSpecialties: 'لا توجد تخصصات متاحة.', favoritesTitle: 'المفضلة', searchFavorites: 'البحث في المفضلة بالاسم أو الجرعة', noFavoritesFound: 'لا توجد مفضلة', saveProviderProducts: 'احفظ منتجات المزودين لتجدها بسرعة هنا.', unavailableProvider: 'غير متاح: المزود غير نشط، المنتج غير نشط، أو نفد المخزون', beautyProducts: 'منتجات الجمال', bestPrices: 'أفضل الأسعار', manufacturers: 'المصانع', specialties: 'التخصصات', specialty: 'تخصص', notifications: 'الإشعارات', noStoresAvailable: 'لا توجد متاجر متاحة.', noManufacturersAvailable: 'لا توجد مصانع متاحة.', noSpecialtiesAvailable: 'لا توجد تخصصات متاحة.', noBeautyProducts: 'لا توجد منتجات جمال متاحة.', noMatchingManufacturerProducts: 'لا توجد منتجات مطابقة للمصنع.', noStoreProducts: 'لا توجد منتجات متاحة لهذا المتجر.', noPendingOrdersSimple: 'لا توجد طلبات معلقة.', noPreviousOrders: 'لا توجد طلبات سابقة.',
+    loadingProduct: 'جارٍ تحميل المنتج...', unableLoadProduct: 'تعذر تحميل المنتج', productNotFound: 'المنتج غير موجود', loadingFavorites: 'جارٍ التحميل...', loadingStores: 'جارٍ تحميل المتاجر...', loadingManufacturers: 'جارٍ تحميل المصانع...', back: 'رجوع', delete: 'حذف', deleteProductQuestion: 'حذف المنتج؟', activateStoreQuestion: 'تفعيل المتجر؟', deactivateStoreQuestion: 'تعطيل المتجر؟', trustedMarketplace: 'سوق صيدلي موثوق', name: 'الاسم', english: 'الإنجليزية', arabic: 'العربية', cartItems: 'السلة، {{count}} عناصر',
   },
 } as const;
 
-export function t(key: keyof (typeof translations)['en'], language: LanguageCode = defaultLanguage) {
-  return translations[language][key] ?? translations.en[key] ?? key;
+export function t(key: keyof (typeof translations)['en'], language: LanguageCode = defaultLanguage, variables?: Record<string, string | number>) {
+  let value = String((translations as any)[language]?.[key] ?? translations.en[key] ?? key);
+  if (variables) for (const [name, replacement] of Object.entries(variables)) value = value.replaceAll(`{{${name}}}`, String(replacement));
+  return value;
 }
 
 export function getLocalizedCategoryTitle(categoryType: string, language: LanguageCode) {
-  const englishTitles: Record<string, string> = {
-    Medicines: 'Medicines',
-    'Best Prices': 'Best Prices',
-    Factories: 'Factories',
-    Stores: 'Stores',
-    Cosmetics: 'Cosmetics',
+  const titles: Record<string, Record<LanguageCode, string>> = {
+    Medicines: { en: 'Medicines', ar: 'الأدوية' }, 'Best Prices': { en: 'Best Prices', ar: 'أفضل الأسعار' },
+    Factories: { en: 'Factories', ar: 'المصانع' }, Stores: { en: 'Stores', ar: 'المتاجر' }, Cosmetics: { en: 'Cosmetics', ar: 'مستحضرات التجميل' },
   };
-
-  const arabicTitles: Record<string, string> = {
-    Medicines: 'الأدوية',
-    'Best Prices': 'أفضل الأسعار',
-    Factories: 'المصانع',
-    Stores: 'المتاجر',
-    Cosmetics: 'مستحضرات التجميل',
-  };
-
-  const mapping = language === 'ar' ? arabicTitles : englishTitles;
-  return mapping[categoryType] ?? categoryType;
+  return titles[categoryType]?.[language] ?? categoryType;
 }
-
-export function getLocalizedItem(item: any, language: LanguageCode) {
-  if (language === 'en') {
-    return item;
-  }
-
-  const arabicNames: Record<string, string> = {
-    Paracetamol: 'باراسيتامول',
-    Amoxicillin: 'أموكسيسيلين',
-    'Vitamin C': 'فيتامين سي',
-    'Blood Pressure Monitor': 'جهاز قياس ضغط الدم',
-    Thermometer: 'ميزان حرارة',
-    'Face Mask Pack': 'عبوة قناع وجه',
-    'CityCare Pharmacy': 'صيدلية سيتي كير',
-    'Wellness Hub': 'مركز العناية الصحية',
-    'Prime Pharma Labs': 'مختبرات برايم فارما',
-    'Nova Health Manufacturing': 'تصنيع نوفا هيلث',
-    'BrightCare Pharmacy': 'صيدلية برايت كير',
-    'CareFirst Pharmacy': 'صيدلية كير فيرست',
-  };
-
-  const arabicDescriptions: Record<string, string> = {
-    'Pain relief and fever reducer': 'تخفيف الآلام وخافض للحرارة',
-    'Broad-spectrum antibiotic': 'مضاد حيوي واسع الطيف',
-    'Daily immunity support': 'دعم يومي للمناعة',
-    'Portable digital monitoring device': 'جهاز مراقبة رقمي محمول',
-    'Digital body thermometer': 'ميزان حرارة للجسم رقمي',
-    'Protective medical masks': 'أقنعة طبية واقية',
-    'Full-service pharmacy with home delivery': 'صيدلية متكاملة مع توصيل منزلي',
-    'Supplements and personal health products': 'مكملات ومنتجات صحية شخصية',
-    'Manufacturing sterile pharmaceutical products': 'تصنيع منتجات صيدلانية معقمة',
-    'Medical device and diagnostic production': 'إنتاج الأجهزة الطبية والتشخيصية',
-    '24/7 emergency pharmacy with express delivery': 'صيدلية طوارئ على مدار الساعة مع توصيل سريع',
-    'Prescription and wellness pharmacy': 'صيدلية وصفات وصحة عامة',
-  };
-
-  const localized = { ...item };
-
-  if (arabicNames[item.name]) {
-    localized.name = arabicNames[item.name];
-  }
-
-  if (arabicDescriptions[item.description]) {
-    localized.description = arabicDescriptions[item.description];
-  }
-
-  return localized;
-}
-
-export default function I18nModule() {
-  return null;
-}
+export function getLocalizedItem(item: any, _language: LanguageCode) { return item; }

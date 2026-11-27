@@ -24,4 +24,10 @@ export default StyleSheet.create({
   emptyTitle: { color: '#102A43', fontSize: 18, fontWeight: '900', marginTop: 10 },
   emptyText: { color: '#718096', textAlign: 'center', marginTop: 6 },
   feedback: { color: '#16794A', backgroundColor: '#DCFCE7', borderRadius: 10, padding: 12, marginHorizontal: 16, marginTop: 12, fontWeight: '700' },
+  filterButton: { width: 38, height: 38, borderRadius: 10, backgroundColor: '#EEF6FF', alignItems: 'center', justifyContent: 'center' },
+  filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, paddingHorizontal: 16, marginBottom: 8 },
+  filter: { borderRadius: 10, borderWidth: 1, borderColor: '#D9E3EF', backgroundColor: '#FFFFFF', paddingHorizontal: 10, paddingVertical: 7 },
+  filterActive: { borderColor: '#208AEF', backgroundColor: '#EEF6FF' },
+  filterText: { color: '#64748B', fontSize: 12, fontWeight: '800', textTransform: 'capitalize' },
+  filterTextActive: { color: '#208AEF' },
 });

@@ -1,7 +1,7 @@
 import { FlatList, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useEffect, useMemo, useState } from 'react';
 
-import { type LanguageCode } from '../../i18n';
+import { t, type LanguageCode } from '../../i18n';
 import type { Order, OrderLineSnapshot } from '../../models/data_types';
 import { useAppState } from '../../state/app_state';
 import { useAuthState } from '../../state/auth_state';
@@ -99,22 +99,22 @@ export default function OrdersLayout({ language, onBack }: { language: LanguageC
   }
 
   if (ordersLoading) {
-    return <View style={styles.container}><Text style={styles.emptyState}>Loading orders...</Text></View>;
+    return <View style={styles.container}><Text style={styles.emptyState}>{t('loading', language)}</Text></View>;
   }
 
   if (ordersError) {
-    return <View style={styles.container}><Text style={styles.emptyState}>{ordersError}</Text><TouchableOpacity style={styles.reorderButton} onPress={() => void refreshOrders()}><Text style={styles.reorderText}>Retry</Text></TouchableOpacity></View>;
+    return <View style={styles.container}><Text style={styles.emptyState}>{ordersError}</Text><TouchableOpacity style={styles.reorderButton} onPress={() => void refreshOrders()}><Text style={styles.reorderText}>{t('retry', language)}</Text></TouchableOpacity></View>;
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.tabs}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>
         {(['all', 'pending', 'approved', 'rejected', 'completed'] as const).map((status) => (
           <TouchableOpacity key={status} activeOpacity={0.8} onPress={() => setTab(status)} style={[styles.tab, tab === status && styles.tabActive]}>
-            <Text style={[styles.tabText, tab === status && styles.tabTextActive]}>{status}</Text>
+            <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.tabText, tab === status && styles.tabTextActive]}>{status === 'all' ? t('all', language) : t(status, language)}</Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
 
       <FlatList
         data={filtered}

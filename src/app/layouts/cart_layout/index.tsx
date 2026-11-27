@@ -1,8 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { FlatList, Image, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAppState } from "../../state/app_state";
+import { t } from '../../i18n';
 import styles from "./styles";
 import AppHeader from "@/app/components/app_header";
 
@@ -15,7 +17,7 @@ export default function CartLayout({
   onAddItems?: () => void;
   onBack?: () => void;
 }) {
-  const { cart, updateQuantity, removeFromCart, cartTotal } = useAppState();
+  const { cart, updateQuantity, removeFromCart, cartTotal, language } = useAppState();
   const [stockMessage, setStockMessage] = useState("");
 
   const providerGroups = new Map<
@@ -36,7 +38,7 @@ export default function CartLayout({
 
   if (cart.length === 0) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView edges={['bottom']} style={styles.container}>
         <View style={styles.header}>
           {onBack ? (
             <TouchableOpacity
@@ -47,34 +49,34 @@ export default function CartLayout({
               <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
             </TouchableOpacity>
           ) : null}
-          <Text style={styles.title}>Cart</Text>
+          <Text style={styles.title}>{t('cart', language)}</Text>
         </View>
         <View style={styles.emptyState}>
           <Ionicons name="cart-outline" size={44} color="#94A3B8" />
-          <Text style={styles.emptyText}>Your cart is empty</Text>
+          <Text style={styles.emptyText}>{t('cartEmpty', language)}</Text>
           {onAddItems && (
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={onAddItems}
               style={styles.checkoutButton}
             >
-              <Text style={styles.checkoutText}>Continue shopping</Text>
+              <Text style={styles.checkoutText}>{t('continueShopping', language)}</Text>
             </TouchableOpacity>
           )}
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView edges={['bottom']} style={styles.container}>
       <View style={styles.header}>
         {onBack ? (
           <TouchableOpacity activeOpacity={0.8} onPress={onBack} style={styles.backButton}>
             <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
           </TouchableOpacity>
         ) : null}
-        <Text style={styles.title}>Cart</Text>
+        <Text style={styles.title}>{t('cart', language)}</Text>
       </View>
       {stockMessage ? (
         <View style={styles.stockMessage}>
@@ -96,7 +98,7 @@ export default function CartLayout({
                 <View>
                   <Text style={styles.providerName}>{group.name}</Text>
                   <Text style={styles.providerType}>
-                    {group.type === "store" ? "Store" : "Manufacturer"}
+                    {t(group.type === "store" ? 'storeLabel' : 'manufacturerLabel', language)}
                   </Text>
                 </View>
                 <Text style={styles.providerSubtotal}>
@@ -132,7 +134,7 @@ export default function CartLayout({
                           onPress={() => removeFromCart(item.productId)}
                           style={styles.removeButton}
                         >
-                          <Text style={styles.removeText}>Remove</Text>
+                          <Text style={styles.removeText}>{t('remove', language)}</Text>
                         </TouchableOpacity>
                       </View>
                       <View style={styles.priceRow}>
@@ -173,7 +175,7 @@ export default function CartLayout({
                             onPress={() => {
                               if (item.quantity >= stock)
                                 setStockMessage(
-                                  `Stock limit reached for ${item.productName}. Available: ${stock}`
+                                  `${t('stockLimitReachedFor', language)} ${item.productName}. ${t('available', language)}: ${stock}`
                                 );
                               else {
                                 setStockMessage("");
@@ -201,8 +203,8 @@ export default function CartLayout({
         }}
       />
 
-      <View style={styles.summaryCard}>
-        <Text style={styles.summaryLabel}>Overall total</Text>
+      <View style={[styles.summaryCard, { paddingBottom: 14 }]}>
+        <Text style={styles.summaryLabel}>{t('overallTotal', language)}</Text>
         <Text style={styles.summaryTotal}>{cartTotal.toFixed(2)} EGP</Text>
         {onCheckout && (
           <TouchableOpacity
@@ -210,10 +212,10 @@ export default function CartLayout({
             onPress={onCheckout}
             style={styles.checkoutButton}
           >
-            <Text style={styles.checkoutText}>Checkout</Text>
+            <Text style={styles.checkoutText}>{t('checkout', language)}</Text>
           </TouchableOpacity>
         )}
       </View>
-    </View>
+    </SafeAreaView>
   );
 }

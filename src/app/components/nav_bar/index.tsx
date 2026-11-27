@@ -21,8 +21,8 @@ export default function NavBar({ active, language, onChange, onLayoutHeight }: N
   const tabs: { key: Tab; icon: keyof typeof Ionicons.glyphMap; label: string }[] = [
     { key: 'home', icon: 'home', label: t('home', language) },
     { key: 'search', icon: 'search', label: t('search', language) },
-    { key: 'orders', icon: 'receipt', label: 'Orders' },
-    { key: 'profile', icon: 'person', label: 'Profile' },
+    { key: 'orders', icon: 'receipt', label: t('orders', language) },
+    { key: 'profile', icon: 'person', label: t('profile', language) },
   ];
 
   return (

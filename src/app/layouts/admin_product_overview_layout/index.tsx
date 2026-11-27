@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
 import { FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
+import FilterPanel from '../../components/filter_panel';
 import type { Product } from '../../models/data_types';
 import { iocContainer } from '../../models/ioc_container';
 import { getStockStatus } from '../../models/database';
@@ -22,6 +23,7 @@ export default function AdminProductOverviewLayout({ onBack, onProductSelected, 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [refreshVersion, setRefreshVersion] = useState(0);
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -135,45 +137,47 @@ export default function AdminProductOverviewLayout({ onBack, onProductSelected, 
         <View style={styles.headerSpace} />
       </View>
 
-      <View style={styles.searchRow}><Ionicons name="search" size={20} color="#718096" /><TextInput value={query} onChangeText={setQuery} placeholder="Search product or dosage" style={styles.searchInput} /></View>
+      <View style={styles.searchRow}><Ionicons name="search" size={20} color="#718096" /><TextInput value={query} onChangeText={setQuery} placeholder="Search product or dosage" style={styles.searchInput} /><TouchableOpacity style={styles.clearButton} onPress={() => setShowFilters((visible) => !visible)}><Text style={styles.clearText}>Filter</Text></TouchableOpacity></View>
 
-      <View style={styles.filters}>
-        {(['all', 'store', 'manufacturer'] as const).map((filter) => (
-          <TouchableOpacity key={filter} style={[styles.filter, providerType === filter && styles.filterActive]} onPress={() => setProviderType(filter)}><Text style={[styles.filterText, providerType === filter && styles.filterTextActive]}>{filter === 'all' ? 'All providers' : filter === 'store' ? 'Stores' : 'Manufacturers'}</Text></TouchableOpacity>
-        ))}
-      </View>
+      <FilterPanel visible={showFilters} title="Filters" clearLabel="Clear" applyLabel="Apply" onClear={clearFilters} onApply={() => setShowFilters(false)}>
+        <View style={styles.filters}>
+          {(['all', 'store', 'manufacturer'] as const).map((filter) => (
+            <TouchableOpacity key={filter} style={[styles.filter, providerType === filter && styles.filterActive]} onPress={() => setProviderType(filter)}><Text style={[styles.filterText, providerType === filter && styles.filterTextActive]}>{filter === 'all' ? 'All providers' : filter === 'store' ? 'Stores' : 'Manufacturers'}</Text></TouchableOpacity>
+          ))}
+        </View>
 
-      <View style={styles.filters}>
-        {(['all', 'available', 'low-stock', 'out-of-stock'] as const).map((filter) => (
-          <TouchableOpacity key={filter} style={[styles.filter, stockFilter === filter && styles.filterActive]} onPress={() => setStockFilter(filter)}><Text style={[styles.filterText, stockFilter === filter && styles.filterTextActive]}>{filter === 'all' ? 'All stock' : filter}</Text></TouchableOpacity>
-        ))}
-      </View>
+        <View style={styles.filters}>
+          {(['all', 'available', 'low-stock', 'out-of-stock'] as const).map((filter) => (
+            <TouchableOpacity key={filter} style={[styles.filter, stockFilter === filter && styles.filterActive]} onPress={() => setStockFilter(filter)}><Text style={[styles.filterText, stockFilter === filter && styles.filterTextActive]}>{filter === 'all' ? 'All stock' : filter}</Text></TouchableOpacity>
+          ))}
+        </View>
 
-      <View style={styles.filters}>
-        {(['all', 'active', 'inactive'] as const).map((filter) => (
-          <TouchableOpacity key={filter} style={[styles.filter, availabilityFilter === filter && styles.filterActive]} onPress={() => setAvailabilityFilter(filter)}><Text style={[styles.filterText, availabilityFilter === filter && styles.filterTextActive]}>{filter}</Text></TouchableOpacity>
-        ))}
-      </View>
+        <View style={styles.filters}>
+          {(['all', 'active', 'inactive'] as const).map((filter) => (
+            <TouchableOpacity key={filter} style={[styles.filter, availabilityFilter === filter && styles.filterActive]} onPress={() => setAvailabilityFilter(filter)}><Text style={[styles.filterText, availabilityFilter === filter && styles.filterTextActive]}>{filter}</Text></TouchableOpacity>
+          ))}
+        </View>
 
-      <View style={styles.filters}>
-        <TouchableOpacity style={[styles.sortFilter, sortMode === 'name' && styles.filterActive]} onPress={() => setSortMode('name')}><Text style={[styles.filterText, sortMode === 'name' && styles.filterTextActive]}>Name</Text></TouchableOpacity>
-        <TouchableOpacity style={[styles.sortFilter, sortMode === 'priceAsc' && styles.filterActive]} onPress={() => setSortMode('priceAsc')}><Text style={[styles.filterText, sortMode === 'priceAsc' && styles.filterTextActive]}>Lowest price</Text></TouchableOpacity>
-        <TouchableOpacity style={[styles.sortFilter, sortMode === 'priceDesc' && styles.filterActive]} onPress={() => setSortMode('priceDesc')}><Text style={[styles.filterText, sortMode === 'priceDesc' && styles.filterTextActive]}>Highest price</Text></TouchableOpacity>
-        <TouchableOpacity style={[styles.sortFilter, sortMode === 'discount' && styles.filterActive]} onPress={() => setSortMode('discount')}><Text style={[styles.filterText, sortMode === 'discount' && styles.filterTextActive]}>Discount</Text></TouchableOpacity>
-        <TouchableOpacity style={[styles.sortFilter, sortMode === 'stockAsc' && styles.filterActive]} onPress={() => setSortMode('stockAsc')}><Text style={[styles.filterText, sortMode === 'stockAsc' && styles.filterTextActive]}>Lowest stock</Text></TouchableOpacity>
-        <TouchableOpacity style={[styles.sortFilter, sortMode === 'stockDesc' && styles.filterActive]} onPress={() => setSortMode('stockDesc')}><Text style={[styles.filterText, sortMode === 'stockDesc' && styles.filterTextActive]}>Highest stock</Text></TouchableOpacity>
-      </View>
+        <View style={styles.filters}>
+          <TouchableOpacity style={[styles.sortFilter, sortMode === 'name' && styles.filterActive]} onPress={() => setSortMode('name')}><Text style={[styles.filterText, sortMode === 'name' && styles.filterTextActive]}>Name</Text></TouchableOpacity>
+          <TouchableOpacity style={[styles.sortFilter, sortMode === 'priceAsc' && styles.filterActive]} onPress={() => setSortMode('priceAsc')}><Text style={[styles.filterText, sortMode === 'priceAsc' && styles.filterTextActive]}>Lowest price</Text></TouchableOpacity>
+          <TouchableOpacity style={[styles.sortFilter, sortMode === 'priceDesc' && styles.filterActive]} onPress={() => setSortMode('priceDesc')}><Text style={[styles.filterText, sortMode === 'priceDesc' && styles.filterTextActive]}>Highest price</Text></TouchableOpacity>
+          <TouchableOpacity style={[styles.sortFilter, sortMode === 'discount' && styles.filterActive]} onPress={() => setSortMode('discount')}><Text style={[styles.filterText, sortMode === 'discount' && styles.filterTextActive]}>Discount</Text></TouchableOpacity>
+          <TouchableOpacity style={[styles.sortFilter, sortMode === 'stockAsc' && styles.filterActive]} onPress={() => setSortMode('stockAsc')}><Text style={[styles.filterText, sortMode === 'stockAsc' && styles.filterTextActive]}>Lowest stock</Text></TouchableOpacity>
+          <TouchableOpacity style={[styles.sortFilter, sortMode === 'stockDesc' && styles.filterActive]} onPress={() => setSortMode('stockDesc')}><Text style={[styles.filterText, sortMode === 'stockDesc' && styles.filterTextActive]}>Highest stock</Text></TouchableOpacity>
+        </View>
 
-      <View style={styles.categoryRow}>
-        {(['all', ...specialties.map((item) => item.legacyId ?? item.id)] as const).map((id) => {
-          const specialty = specialties.find((item) => item.id === id || item.legacyId === id);
-          return (
-            <TouchableOpacity key={id} style={[styles.categoryFilter, categoryId === id && styles.categoryFilterActive]} onPress={() => setCategoryId(id)}>
-              <Text style={[styles.categoryText, categoryId === id && styles.categoryTextActive]}>{id === 'all' ? 'All categories' : specialty?.name ?? id}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+        <View style={styles.categoryRow}>
+          {(['all', ...specialties.map((item) => item.legacyId ?? item.id)] as const).map((id) => {
+            const specialty = specialties.find((item) => item.id === id || item.legacyId === id);
+            return (
+              <TouchableOpacity key={id} style={[styles.categoryFilter, categoryId === id && styles.categoryFilterActive]} onPress={() => setCategoryId(id)}>
+                <Text style={[styles.categoryText, categoryId === id && styles.categoryTextActive]}>{id === 'all' ? 'All categories' : specialty?.name ?? id}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </FilterPanel>
 
       {activeFilterCount > 0 ? <TouchableOpacity style={styles.clearButton} onPress={clearFilters}><Text style={styles.clearText}>Clear filters ({activeFilterCount})</Text></TouchableOpacity> : null}
 

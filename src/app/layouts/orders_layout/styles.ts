@@ -12,8 +12,10 @@ export default StyleSheet.create({
     paddingBottom: 8,
   },
   tab: {
-    flex: 1,
+    minWidth: 112,
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 12,
     marginHorizontal: 4,
@@ -24,7 +26,6 @@ export default StyleSheet.create({
   },
   tabText: {
     color: '#208AEF',
-    
   },
   tabTextActive: {
     color: '#fff',
