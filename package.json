@@ -29,7 +29,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "check-supabase": "node scripts/check-supabase.js"
+    "check-supabase": "node scripts/check-supabase.js",
+    "check-ioc-database": "node scripts/check-ioc-database.js"
   },
   "private": true
 }

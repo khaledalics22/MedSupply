@@ -423,12 +423,25 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setOrdersError('');
       return () => { active = false; };
     }
+
     setOrdersLoading(true);
     setOrdersError('');
-    iocContainer.getDatabase().getOwnOrdersAsync(user.id)
-      .then((persisted) => { if (active) setOrders(persisted); })
-      .catch((caught) => { if (active) setOrdersError(caught instanceof Error ? caught.message : 'Unable to load orders.'); })
-      .finally(() => { if (active) setOrdersLoading(false); });
+
+    void (async () => {
+      try {
+        const database = iocContainer.getDatabase();
+        if (typeof database.getOwnOrdersAsync !== 'function') {
+          throw new Error('Database getOwnOrdersAsync is unavailable.');
+        }
+        const persisted = await database.getOwnOrdersAsync(user.id);
+        if (active) setOrders(persisted);
+      } catch (caught) {
+        if (active) setOrdersError(caught instanceof Error ? caught.message : 'Unable to load orders.');
+      } finally {
+        if (active) setOrdersLoading(false);
+      }
+    })();
+
     return () => { active = false; };
   }, [user?.id, user?.role]);
 
@@ -436,10 +449,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     let active = true;
     const key = user?.id ? `medsupply.favorites.products.${user.id}` : null;
     if (!key) { setFavoriteProducts([]); return; }
-    AsyncStorage.getItem(key).then((stored) => {
-      if (!active) return;
-      try { setFavoriteProducts(stored ? JSON.parse(stored) as string[] : []); } catch { setFavoriteProducts([]); }
-    });
+
+    void (async () => {
+      try {
+        const stored = await AsyncStorage.getItem(key);
+        if (!active) return;
+        try {
+          setFavoriteProducts(stored ? JSON.parse(stored) as string[] : []);
+        } catch {
+          setFavoriteProducts([]);
+        }
+      } catch {
+        if (active) setFavoriteProducts([]);
+      }
+    })();
+
     return () => { active = false; };
   }, [user?.id]);
 

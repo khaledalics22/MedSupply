@@ -91,6 +91,7 @@ class ProviderAwareDatabase extends Database {
   rejectOrderAsync(orderId: string) { return this.supabaseProviders.rejectOrderAsync(orderId); }
   completeOrderAsync(orderId: string) { return this.supabaseProviders.completeOrderAsync(orderId); }
   getAllOrdersAsync() { return this.supabaseProviders.getAllOrdersAsync(); }
+  getOwnOrdersAsync(pharmacistId: string) { return this.supabaseProviders.getOwnOrdersAsync(pharmacistId); }
   getOrderByIdAsync(orderId: string) { return this.supabaseProviders.getOrderByIdAsync(orderId); }
 }
 
