@@ -7,8 +7,8 @@ export type SupabaseConnectionResult = {
   status?: number;
 };
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim();
-const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY?.trim();
+const supabaseUrl = 'https://hrebuxetwdknhvbrohla.supabase.co';
+const supabaseKey = 'sb_publishable_9Jq-7jvCVaRw7YNRqQK9Kw_vfMPa0Mx';
 
 function missingConfiguration(): string[] {
   const missing: string[] = [];

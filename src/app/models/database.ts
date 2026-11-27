@@ -56,6 +56,7 @@ export abstract class Database {
   abstract approveAndDeductOrderStock(lines: OrderLineSnapshot[]): { success: boolean; errors: string[] };
   abstract createOrderAsync(items: OrderCreationItem[]): Promise<OrderCreationResult>;
   abstract getAllOrdersAsync(): Promise<Order[]>;
+  abstract getOwnOrdersAsync(pharmacistId: string): Promise<Order[]>;
   abstract getOrderByIdAsync(orderId: string): Promise<Order | undefined>;
   abstract approveOrderAsync(orderId: string): Promise<OrderActionResult>;
   abstract rejectOrderAsync(orderId: string): Promise<OrderActionResult>;
@@ -476,6 +477,9 @@ export class MockDatabase extends Database {
     throw new Error('Mock order creation is unavailable. Use Supabase create_order in production.');
   }
   async getAllOrdersAsync(): Promise<Order[]> {
+    return [];
+  }
+  async getOwnOrdersAsync(pharmacistId: string): Promise<Order[]> {
     return [];
   }
   async getOrderByIdAsync(orderId: string): Promise<Order | undefined> {

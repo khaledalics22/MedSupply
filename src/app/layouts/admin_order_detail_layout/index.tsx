@@ -128,7 +128,7 @@ export default function AdminOrderDetailLayout({ orderId, onBack }: { orderId: s
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>{actionType === 'approve' ? 'Approve entire order?' : actionType === 'reject' ? 'Reject entire order?' : 'Complete entire order?'}</Text>
-            <Text style={styles.modalText}>{actionType === 'approve' ? 'The persisted order status will become approved. Stock will not change.' : actionType === 'reject' ? 'The persisted order status will become rejected. Stock will not be restored.' : 'The persisted order status will become completed. Stock will not change.'}</Text>
+            <Text style={styles.modalText}>{actionType === 'approve' ? 'The persisted order status will become approved. Stock will not change.' : actionType === 'reject' ? 'The persisted order status will become rejected and its deducted stock will be restored.' : 'The persisted order status will become completed. Stock will not change.'}</Text>
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.cancelButton} disabled={submitting} onPress={() => setActionType(null)}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity>
               <TouchableOpacity style={actionType === 'reject' ? styles.confirmReject : actionType === 'complete' ? styles.confirmComplete : styles.confirmApprove} disabled={submitting} onPress={() => void submitAction()}><Text style={styles.confirmText}>{submitting ? 'Submitting...' : actionType === 'approve' ? 'Approve' : actionType === 'reject' ? 'Reject' : 'Complete'}</Text></TouchableOpacity>

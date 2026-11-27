@@ -1,5 +1,5 @@
-const url = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim();
-const key = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY?.trim();
+const url = 'https://hrebuxetwdknhvbrohla.supabase.co';
+const key = 'sb_publishable_9Jq-7jvCVaRw7YNRqQK9Kw_vfMPa0Mx';
 
 async function run() {
   if (!url || !key) {

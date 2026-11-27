@@ -22,6 +22,9 @@ type AppStateContextValue = {
   unreadNotifications: number;
   markNotificationRead: (id: string) => void;
   orders: Order[];
+  ordersLoading: boolean;
+  ordersError: string;
+  refreshOrders: () => Promise<void>;
   createOrder: () => Promise<{ success: boolean; issues: CheckoutValidationIssue[]; orderId?: string }>;
   favoriteStores: string[];
   toggleFavoriteStore: (storeId: string) => void;
@@ -58,6 +61,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<NotificationItem[]>(initialNotifications);
   const [favoriteStores, setFavoriteStores] = useState<string[]>(['store-1']);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState('');
   const [favoriteProducts, setFavoriteProducts] = useState<string[]>([]);
 
   const enqueueCartMutation = <T,>(operation: () => Promise<T> | T): Promise<T> => {
@@ -230,6 +235,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       };
 
       setOrders((previous) => [order, ...previous]);
+      if (user?.id && user.role === 'pharmacist') {
+        void iocContainer.getDatabase().getOwnOrdersAsync(user.id).then((persisted) => setOrders(persisted)).catch(() => undefined);
+      }
       commitCart([]);
       return { success: true, issues: [], orderId: result.orderId };
     } catch (caught) {
@@ -273,6 +281,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setOrders((previous) => previous.map((item) => item.id === result.orderId
         ? { ...item, status: 'approved', approvedAt: new Date().toISOString() }
         : item));
+      if (user?.id && user.role === 'pharmacist') {
+        const persisted = await iocContainer.getDatabase().getOwnOrdersAsync(user.id);
+        setOrders(persisted);
+      }
       return { success: true, errors: [] };
     } catch (caught) {
       return { success: false, errors: [caught instanceof Error ? caught.message : 'Unable to approve order.'] };
@@ -285,6 +297,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setOrders((previous) => previous.map((item) => item.id === result.orderId
         ? { ...item, status: 'rejected', rejectionReason: 'Rejected by administrator.', rejectedAt: new Date().toISOString() }
         : item));
+      if (user?.id && user.role === 'pharmacist') {
+        const persisted = await iocContainer.getDatabase().getOwnOrdersAsync(user.id);
+        setOrders(persisted);
+      }
       return { success: true, errors: [] };
     } catch (caught) {
       return { success: false, errors: [caught instanceof Error ? caught.message : 'Unable to reject order.'] };
@@ -297,6 +313,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setOrders((previous) => previous.map((item) => item.id === result.orderId
         ? { ...item, status: 'completed', completedAt: new Date().toISOString() }
         : item));
+      if (user?.id && user.role === 'pharmacist') {
+        const persisted = await iocContainer.getDatabase().getOwnOrdersAsync(user.id);
+        setOrders(persisted);
+      }
       return { success: true, errors: [] };
     } catch (caught) {
       return { success: false, errors: [caught instanceof Error ? caught.message : 'Unable to complete order.'] };
@@ -372,10 +392,45 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     language, setLanguage, cart, addToCart, updateQuantity, removeFromCart,
     refreshCartPricing,
     cartTotal, cartCount, notifications, unreadNotifications, markNotificationRead,
-    orders, createOrder, approveOrder, rejectOrder, completeOrder, favoriteStores, toggleFavoriteStore, reorderOrder,
+    orders, ordersLoading, ordersError, refreshOrders: async () => {
+      if (ordersLoading) return;
+      setOrdersLoading(true);
+      try {
+        const database = iocContainer.getDatabase();
+        if (!user?.id) {
+          setOrders([]);
+          setOrdersError('');
+          return;
+        }
+        const result = await database.getOwnOrdersAsync(user.id);
+        setOrders(result);
+        setOrdersError('');
+      } catch (error) {
+        setOrdersError(error instanceof Error ? error.message : 'Unknown error');
+      } finally {
+        setOrdersLoading(false);
+      }
+    }, createOrder, approveOrder, rejectOrder, completeOrder, favoriteStores, toggleFavoriteStore, reorderOrder,
     favoriteProducts, toggleFavoriteProduct, isFavoriteProduct: (productId) => favoriteProducts.includes(productId),
     cartMutating,
-  }), [language, cart, cartCount, cartTotal, notifications, unreadNotifications, orders, favoriteStores, favoriteProducts, cartMutating]);
+  }), [language, cart, cartCount, cartTotal, notifications, unreadNotifications, orders, ordersLoading, ordersError, favoriteStores, favoriteProducts, cartMutating]);
+
+  useEffect(() => {
+    let active = true;
+    if (!user?.id || user.role !== 'pharmacist') {
+      setOrders([]);
+      setOrdersLoading(false);
+      setOrdersError('');
+      return () => { active = false; };
+    }
+    setOrdersLoading(true);
+    setOrdersError('');
+    iocContainer.getDatabase().getOwnOrdersAsync(user.id)
+      .then((persisted) => { if (active) setOrders(persisted); })
+      .catch((caught) => { if (active) setOrdersError(caught instanceof Error ? caught.message : 'Unable to load orders.'); })
+      .finally(() => { if (active) setOrdersLoading(false); });
+    return () => { active = false; };
+  }, [user?.id, user?.role]);
 
   useEffect(() => {
     let active = true;

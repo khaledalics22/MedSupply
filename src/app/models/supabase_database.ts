@@ -113,6 +113,8 @@ export class SupabaseProviderDatabase {
       pharmacistPhone: profile?.phone ? String(profile.phone) : undefined,
       items,
       totalItems: Number(row.total_quantity ?? 0),
+      subtotalAmount: row.subtotal_amount == null ? undefined : Number(row.subtotal_amount),
+      lineCount: row.line_count == null ? undefined : Number(row.line_count),
       totalDiscount: Number(row.discount_amount ?? 0),
       totalPrice: Number(row.total_amount ?? 0),
       status: String(row.status) as Order['status'],
@@ -425,6 +427,18 @@ export class SupabaseProviderDatabase {
     const { data, error } = await client.from('orders').select('*, profiles:pharmacist_id(full_name, pharmacy_name, email), order_provider_groups(*, order_items(*))').order('created_at', { ascending: false });
     if (error) throw new Error(`${error.code ?? 'DB_ERROR'}: ${error.message}`);
     return (data ?? []).map((row) => this.mapOrder(row));
+  }
+
+  async getOwnOrdersAsync(pharmacistId: string): Promise<Order[]> {
+    const client = supabase;
+    if (!client) throw new Error('Supabase is not configured.');
+    const { data, error } = await client
+      .from('orders')
+      .select('*, profiles:pharmacist_id(full_name, pharmacy_name, email), order_provider_groups(*, order_items(*))')
+      .eq('pharmacist_id', pharmacistId)
+      .order('created_at', { ascending: false });
+    if (error) throw new Error(`${error.code ?? 'DB_ERROR'}: ${error.message}`);
+    return (data ?? []).map((row) => this.mapOrder(row)).filter((order) => order.pharmacistId === pharmacistId);
   }
 
   async getOrderByIdAsync(orderId: string): Promise<Order | undefined> {

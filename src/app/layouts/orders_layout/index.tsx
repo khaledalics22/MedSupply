@@ -1,5 +1,5 @@
 import { FlatList, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { type LanguageCode } from '../../i18n';
 import type { Order, OrderLineSnapshot } from '../../models/data_types';
@@ -8,15 +8,25 @@ import { useAuthState } from '../../state/auth_state';
 import styles from './styles';
 
 export default function OrdersLayout({ language, onBack }: { language: LanguageCode; onBack: () => void }) {
-  const { orders, reorderOrder } = useAppState();
+  const { orders, ordersLoading, ordersError, refreshOrders, reorderOrder } = useAppState();
   const { user } = useAuthState();
   const [tab, setTab] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'completed'>('all');
   const [reorderFeedback, setReorderFeedback] = useState('');
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (orders.length === 0 && !ordersLoading && !ordersError) {
+      void refreshOrders();
+    }
+  }, []);
+
   const ownOrders = useMemo(() => orders.filter((order) => order.pharmacistId === user?.id), [orders, user?.id]);
   const filtered = tab === 'all' ? ownOrders : ownOrders.filter((order) => order.status === tab);
   const selectedOrder = selectedOrderId ? ownOrders.find((order) => order.id === selectedOrderId) : undefined;
+
+  useEffect(() => {
+    // Any side effects or data fetching can be done here
+  }, [selectedOrderId, tab, orders]);
 
   if (selectedOrder) {
     const groups = new Map<string, { name: string; type: 'store' | 'manufacturer'; lines: OrderLineSnapshot[] }>();
@@ -86,6 +96,14 @@ export default function OrdersLayout({ language, onBack }: { language: LanguageC
         </ScrollView>
       </View>
     );
+  }
+
+  if (ordersLoading) {
+    return <View style={styles.container}><Text style={styles.emptyState}>Loading orders...</Text></View>;
+  }
+
+  if (ordersError) {
+    return <View style={styles.container}><Text style={styles.emptyState}>{ordersError}</Text><TouchableOpacity style={styles.reorderButton} onPress={() => void refreshOrders()}><Text style={styles.reorderText}>Retry</Text></TouchableOpacity></View>;
   }
 
   return (
